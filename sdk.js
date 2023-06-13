@@ -26,7 +26,7 @@ class ContractSdk {
         this.stakeScriptRefUtxo = await this.getScriptRefUtxo(contractsMgr.StoremanStackScript.script());
         this.stakeCheckScriptRefUtxo = await this.getScriptRefUtxo(contractsMgr.StakeCheckScript.script());
         this.mintChecTokenscriptRefUtxo = await this.getScriptRefUtxo(contracts.MintCheckTokenScript.script());
-        this.treasuryChecTokenscriptRefUtxo = await this.getScriptRefUtxo(contracts.TreasuryCheckScript.script());
+        this.treasuryChecTokenscriptRefUtxo = await this.getScriptRefUtxo(contracts.TreasuryCheckTokenScript.script());
     }
 
     async getScriptRefUtxo(script) {
@@ -205,7 +205,7 @@ class ContractSdk {
 
         const protocolParamsGlobal = await ogmiosUtils.getParamProtocol();
 
-        console.log('stakeCheckAddr =', stakeCheckAddr);
+        // console.log('stakeCheckAddr =', stakeCheckAddr);
         let stakeCheckUtxo = await ogmiosUtils.getUtxo(stakeCheckAddr);
         if (stakeCheckUtxo && stakeCheckUtxo.length > 0) {
             stakeCheckUtxo = stakeCheckUtxo[0];
@@ -264,9 +264,9 @@ class ContractSdk {
      }
 
     async mintTreasuryCheckToken(amount, mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn) { 
-        const groupInfoUtxo = await getGroupInfoToken();
-        const groupInfoParams = contractsMgr.GroupNFT.genGroupInfoDatum(groupInfoUtxo.datum);
-        const adminNftUtxo = await getAdminNft();
+        const groupInfoUtxo = await this.getGroupInfoNft();
+        const groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(groupInfoUtxo.datum);
+        const adminNftUtxo = await this.getAdminNft();
         const protocolParamsGlobal = await ogmiosUtils.getParamProtocol();
 
         let mustSignBy = [];
@@ -281,16 +281,16 @@ class ContractSdk {
 
         const mintTo = contracts.TreasuryCheckScript.address(groupInfoParams[contractsMgr.GroupNFT.StkVh]).to_bech32(this.ADDR_PREFIX);
 
-        const signedTx = await contracts.TreasuryCheckScript.mint(protocolParamsGlobal, utxosForFee, utxoForCollaterals, this.treasuryChecTokenscriptRefUtxo
+        const signedTx = await contracts.TreasuryCheckTokenScript.mint(protocolParamsGlobal, utxosForFee, utxoForCollaterals, this.treasuryChecTokenscriptRefUtxo
             , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript:this.adminNftHoldRefScript, mustSignBy }, changeAddr, amount, mintTo, signFn);
  
         return signedTx; 
     }
 
-    async mintMintCheckToken(amount, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn) {
-        const groupInfoUtxo = await getGroupInfoToken();
-        const groupInfoParams = contractsMgr.GroupNFT.genGroupInfoDatum(groupInfoUtxo.datum);
-        const adminNftUtxo = await getAdminNft();
+    async mintMintCheckToken(amount, mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn) {
+        const groupInfoUtxo = await this.getGroupInfoNft();
+        const groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(groupInfoUtxo.datum);
+        const adminNftUtxo = await this.getAdminNft();
         const protocolParamsGlobal = await ogmiosUtils.getParamProtocol();
 
         let mustSignBy = [];
@@ -305,7 +305,7 @@ class ContractSdk {
 
         const mintTo = contracts.MintCheckScript.address(groupInfoParams[contractsMgr.GroupNFT.StkVh]).to_bech32(this.ADDR_PREFIX);
 
-        const signedTx = await contracts.MintCheckScript.mint(protocolParamsGlobal, utxosForFee, utxoForCollaterals, this.mintChecTokenscriptRefUtxo
+        const signedTx = await contracts.MintCheckTokenScript.mint(protocolParamsGlobal, utxosForFee, utxoForCollaterals, this.mintChecTokenscriptRefUtxo
             , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript:this.adminNftHoldRefScript, mustSignBy }, changeAddr, amount, mintTo, signFn);
  
         return signedTx; 

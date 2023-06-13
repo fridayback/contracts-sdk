@@ -85,7 +85,7 @@ class AdminNFT {
 
 
         const assetName = CardanoWasm.AssetName.new(Buffer.from(AdminNFTName));
-        console.log(assetName.to_hex());
+        // console.log(assetName.to_hex());
         mintBuilder.add_asset(mint_witnes, assetName, CardanoWasm.Int.from_str('1'));
 
 
@@ -208,7 +208,7 @@ class GroupNFT {
 
     static groupInfoFromDatum(plutusDataHex) {
         const datum = CardanoWasm.PlutusData.from_hex(plutusDataHex);
-        console.log(datum.to_json());
+        // console.log(datum.to_json());
         const parmsLs = datum.as_constr_plutus_data().data().get(0).as_list();
 
         let ret = {};
@@ -1168,7 +1168,7 @@ class StoremanStackScript {
             const stakeDelegation = CardanoWasm.StakeDelegation.new(
                 stk//CardanoWasm.StakeCredential.from_scripthash(this.script().hash())
                 , CardanoWasm.Ed25519KeyHash.from_bech32(pool));
-            console.log(stakeDelegation.to_json());
+            // console.log(stakeDelegation.to_json());
             const stakeDelegationCertificate = CardanoWasm.Certificate.new_stake_delegation(stakeDelegation);
             certificates.add(stakeDelegationCertificate);
         }
@@ -1314,7 +1314,7 @@ class StoremanStackScript {
             totalCollateralValue = totalCollateralValue.checked_add(value);
         }
 
-        console.log('totalCollateralValue =', totalCollateralValue.to_json(), 'fee =', fee.to_str());
+        // console.log('totalCollateralValue =', totalCollateralValue.to_json(), 'fee =', fee.to_str());
 
         const collateralFee = fee.checked_mul(CardanoWasm.BigNum.from_str('2'));
         const collateralChangeValue = totalCollateralValue.checked_sub(CardanoWasm.Value.new(collateralFee));
@@ -1342,7 +1342,7 @@ class StoremanStackScript {
         // console.log('txfeeWithoutPlutus=', txfeeWithoutPlutus.to_str());
 
         const total_fee = plutusCost.checked_add(txfeeWithoutPlutus).checked_mul(CardanoWasm.BigNum.from_str('2'));
-        console.log('total-fee:', total_fee.to_str())
+        // console.log('total-fee:', total_fee.to_str());
 
         const changeAmountNew = totalInputValue.checked_sub(totalOutValueWithowChange).checked_sub(CardanoWasm.Value.new(total_fee));
         const changeOutPutNew = CardanoWasm.TransactionOutput.new(changeAddr, changeAmountNew);
@@ -1589,7 +1589,7 @@ class StoremanStackScript {
             totalCollateralValue = totalCollateralValue.checked_add(value);
         }
 
-        console.log('totalCollateralValue =', totalCollateralValue.to_json(), 'fee =', fee.to_str());
+        // console.log('totalCollateralValue =', totalCollateralValue.to_json(), 'fee =', fee.to_str());
 
         const collateralFee = fee.checked_mul(CardanoWasm.BigNum.from_str('2'));
         const collateralChangeValue = totalCollateralValue.checked_sub(CardanoWasm.Value.new(collateralFee));
@@ -1719,7 +1719,7 @@ class StoremanStackScript {
             const stakeDeregistration = CardanoWasm.StakeDeregistration.new(
                 stk//CardanoWasm.StakeCredential.from_scripthash(this.script().hash())
             );
-            console.log(stakeDeregistration.to_json());
+            // console.log(stakeDeregistration.to_json());
             const stakeDelegationCertificate = CardanoWasm.Certificate.new_stake_deregistration(stakeDeregistration);
             certificates.add(stakeDelegationCertificate);
         }
@@ -1867,7 +1867,7 @@ class StoremanStackScript {
             totalCollateralValue = totalCollateralValue.checked_add(value);
         }
 
-        console.log('totalCollateralValue =', totalCollateralValue.to_json(), 'fee =', fee.to_str());
+        // console.log('totalCollateralValue =', totalCollateralValue.to_json(), 'fee =', fee.to_str());
 
         const collateralFee = fee.checked_mul(CardanoWasm.BigNum.from_str('2'));
         const collateralChangeValue = totalCollateralValue.checked_sub(CardanoWasm.Value.new(collateralFee));

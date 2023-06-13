@@ -1613,7 +1613,7 @@ class CheckTokenScriptBase {
         // txBuilder.add_required_signer(signer);
         contractMgr.AdminNFTHolderScript.usingAdminNft(protocolParams,txBuilder,txInputBuilder,adminNftInfo.adminNftUtxo,adminNftInfo.adminNftHoldRefScript,adminNftInfo.mustSignBy);
         txBuilder.set_inputs(txInputBuilder);
-        console.log(txBuilder.get_total_input().to_json());
+        // console.log(txBuilder.get_total_input().to_json());
         if (ttl) {
             txBuilder.set_ttl(ttl);
         }
