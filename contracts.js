@@ -1868,7 +1868,7 @@ class CheckTokenScriptBase {
         mintedValue.set_multiasset(mutiAsset);
         const output = CardanoWasm.TransactionOutput.new(holderAddr, mintedValue);
         output.set_plutus_data(authorityDatum);
-        for (let i = 0; i < mintAmount; i++) {
+        for (let i = 0; i < mintAmount*1; i++) {
             txBuilder.add_output(output);
         }
 
