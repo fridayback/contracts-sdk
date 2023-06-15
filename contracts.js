@@ -51,11 +51,18 @@ class TreasuryCheckScript {
     }
 
     static genBurnRedeemerData() {//{"constructor":0,"fields":[]}
-        const ls = CardanoWasm.PlutusList.new();
+        // const ls = CardanoWasm.PlutusList.new();
+        // return CardanoWasm.PlutusData.new_constr_plutus_data(
+        //     CardanoWasm.ConstrPlutusData.new(
+        //         CardanoWasm.BigNum.from_str('0'),
+        //         ls
+        //     )
+        // )
+
         return CardanoWasm.PlutusData.new_constr_plutus_data(
             CardanoWasm.ConstrPlutusData.new(
                 CardanoWasm.BigNum.from_str('0'),
-                ls
+                CardanoWasm.PlutusList.new()
             )
         )
     }
@@ -71,8 +78,8 @@ class TreasuryCheckScript {
 
         const mintBuilder = CardanoWasm.MintBuilder.new();
         const exUnits = CardanoWasm.ExUnits.new(
-            CardanoWasm.BigNum.from_str((5690302) + ''),
-            CardanoWasm.BigNum.from_str((1860384164) + '')
+            CardanoWasm.BigNum.from_str((4690302) + ''),
+            CardanoWasm.BigNum.from_str((1260384164) + '')
         );
 
         const redeemerData = CardanoWasm.PlutusData.new_empty_constr_plutus_data(CardanoWasm.BigNum.from_str('0'));
@@ -87,25 +94,25 @@ class TreasuryCheckScript {
             , redeemer);
         const assetName = CardanoWasm.AssetName.new(Buffer.from(TreasuryCheckTokenScript.tokenName()));
         console.log(assetName.to_json());
-        mintBuilder.add_asset(mint_witnes, assetName, CardanoWasm.Int.from_str('-' + (utxosSpend.length - 1)));
+        mintBuilder.add_asset(mint_witnes, assetName, CardanoWasm.Int.from_str('-' + (utxosSpend.length)));
         txBuilder.set_mint_builder(mintBuilder);
 
-        {
-            const authorityDatum = utils.genDemoDatum42();
-            const holderAddr = CardanoWasm.Address.from_bech32(utxosSpend[0].address);//TreasuryCheckScript.address(groupInfo[contractMgr.GroupNFT.StkVh]);
-            const tokenId = TreasuryCheckTokenScript.tokenId();
-            const minAdaWithToken = utils.getMinAdaOfUtxo(protocolParams, holderAddr, { coins: 1000000, assets: { [tokenId]: 1 } }, authorityDatum);
+        // {
+        //     const authorityDatum = utils.genDemoDatum42();
+        //     const holderAddr = CardanoWasm.Address.from_bech32(utxosSpend[0].address);//TreasuryCheckScript.address(groupInfo[contractMgr.GroupNFT.StkVh]);
+        //     const tokenId = TreasuryCheckTokenScript.tokenId();
+        //     const minAdaWithToken = utils.getMinAdaOfUtxo(protocolParams, holderAddr, { coins: 1000000, assets: { [tokenId]: 1 } }, authorityDatum);
 
-            const mutiAsset = CardanoWasm.MultiAsset.new();
-            const asset = CardanoWasm.Assets.new();
-            asset.insert(assetName, CardanoWasm.BigNum.from_str('1'));
-            mutiAsset.insert(TreasuryCheckTokenScript.script().hash(), asset);
+        //     const mutiAsset = CardanoWasm.MultiAsset.new();
+        //     const asset = CardanoWasm.Assets.new();
+        //     asset.insert(assetName, CardanoWasm.BigNum.from_str('1'));
+        //     mutiAsset.insert(TreasuryCheckTokenScript.script().hash(), asset);
 
-            let mintedValue = CardanoWasm.Value.new_with_assets(CardanoWasm.BigNum.from_str('' + minAdaWithToken), mutiAsset)
-            const output = CardanoWasm.TransactionOutput.new(CardanoWasm.Address.from_bech32(utxosSpend[0].address), mintedValue);
-            output.set_plutus_data(authorityDatum);
-            txBuilder.add_output(output);
-        }
+        //     let mintedValue = CardanoWasm.Value.new_with_assets(CardanoWasm.BigNum.from_str('' + minAdaWithToken), mutiAsset)
+        //     const output = CardanoWasm.TransactionOutput.new(CardanoWasm.Address.from_bech32(utxosSpend[0].address), mintedValue);
+        //     output.set_plutus_data(authorityDatum);
+        //     txBuilder.add_output(output);
+        // }
 
 
         // let totalInputValue = CardanoWasm.Value.new(CardanoWasm.BigNum.from_str('0'));
@@ -129,8 +136,8 @@ class TreasuryCheckScript {
             // const from = CardanoWasm.Address.from_bech32(utxoForFee.address);
 
             const exUnits = CardanoWasm.ExUnits.new(
-                CardanoWasm.BigNum.from_str((7575293) + ''),
-                CardanoWasm.BigNum.from_str((2880092692) + '')
+                CardanoWasm.BigNum.from_str((4075293) + ''),
+                CardanoWasm.BigNum.from_str((1980092692) + '')
             );
 
             const redeemerData = this.genBurnRedeemerData();
@@ -138,9 +145,9 @@ class TreasuryCheckScript {
             const redeemer = CardanoWasm.Redeemer.new(CardanoWasm.RedeemerTag.new_spend(), CardanoWasm.BigNum.from_str('0'), redeemerData, exUnits);
 
             const scriptHash = utils.addressToPkhOrScriptHash(utxo.address);
-            const witness = CardanoWasm.PlutusWitness.new_with_ref_without_datum(CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(
+            const witness = CardanoWasm.PlutusWitness.new_with_ref(CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(
                 CardanoWasm.ScriptHash.from_hex(scriptHash), scriptRefInput, CardanoWasm.Language.new_plutus_v2())
-                // , CardanoWasm.DatumSource.new_ref_input(input)
+                , CardanoWasm.DatumSource.new_ref_input(input)
                 , redeemer);
 
             txInputBuilder.add_plutus_script_input(witness, input, value);
@@ -1663,11 +1670,11 @@ class MintCheckScript {
 
         const mintBuilder = CardanoWasm.MintBuilder.new();
         const exUnits = CardanoWasm.ExUnits.new(
-            CardanoWasm.BigNum.from_str((5690302) + ''),
-            CardanoWasm.BigNum.from_str((1860384164) + '')
+            CardanoWasm.BigNum.from_str((3971680) + ''),
+            CardanoWasm.BigNum.from_str((1160384164) + '')
         );
 
-        const redeemerData = CardanoWasm.PlutusData.new_empty_constr_plutus_data(CardanoWasm.BigNum.from_str('0'));
+        const redeemerData = this.genBurnRedeemerData();//CardanoWasm.PlutusData.new_empty_constr_plutus_data(CardanoWasm.BigNum.from_str('0'));
         const redeemer = CardanoWasm.Redeemer.new(
             CardanoWasm.RedeemerTag.new_mint(),
             CardanoWasm.BigNum.from_str('0'),
@@ -1704,8 +1711,8 @@ class MintCheckScript {
             // const from = CardanoWasm.Address.from_bech32(utxoForFee.address);
 
             const exUnits = CardanoWasm.ExUnits.new(
-                CardanoWasm.BigNum.from_str((7575293) + ''),
-                CardanoWasm.BigNum.from_str((2880092692) + '')
+                CardanoWasm.BigNum.from_str((5216614) + ''),
+                CardanoWasm.BigNum.from_str((1880092692) + '')
             );
 
             const redeemerData = this.genBurnRedeemerData();
@@ -1714,7 +1721,7 @@ class MintCheckScript {
 
             const scriptHash = utils.addressToPkhOrScriptHash(utxo.address);
             const witness = CardanoWasm.PlutusWitness.new_with_ref(CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(
-                CardanoWasm.ScriptHash.from_hex(scriptHash), input, CardanoWasm.Language.new_plutus_v2())
+                CardanoWasm.ScriptHash.from_hex(scriptHash), scriptRefInput, CardanoWasm.Language.new_plutus_v2())
                 , CardanoWasm.DatumSource.new_ref_input(input)
                 , redeemer);
 
@@ -1868,7 +1875,7 @@ class CheckTokenScriptBase {
         mintedValue.set_multiasset(mutiAsset);
         const output = CardanoWasm.TransactionOutput.new(holderAddr, mintedValue);
         output.set_plutus_data(authorityDatum);
-        for (let i = 0; i < mintAmount*1; i++) {
+        for (let i = 0; i < mintAmount; i++) {
             txBuilder.add_output(output);
         }
 

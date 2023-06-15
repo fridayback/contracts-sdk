@@ -455,7 +455,7 @@ class GroupInfoNFTHolderScript {
         let params = GroupNFT.groupInfoFromDatum(utxosToSpend[0].datum);
         params[GroupNFT.TreasuryCheckVH] = newTreasuryCheckVH;
 
-        return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxosToSpend, scriptRef, adminInfo, params, changeAddress, ttl, signFn, GroupNFT.TreasuryCheckVH, adminInfo);
+        return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxosToSpend, scriptRef, params, changeAddress, ttl, signFn, GroupNFT.TreasuryCheckVH, adminInfo);
 
     }
 
