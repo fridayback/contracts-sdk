@@ -20,7 +20,7 @@ sdk使用指南：
     通过钱包或ogmios服务发送交易，具体方式可自选。
 
 4. sdk接口说明：
-### async setOracleWorker(newOracleWorker, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn) 
+### async setOracleWorker(newOracleWorker, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn) ----  GroupNFT@GroupNFTHolder：update
     newOracleWorker为要设置的oracle worker地址,
     mustSignBy为本交易必须要签名的地址列表，
     utxoForFee为支付交易Fee的utxo,
@@ -28,7 +28,7 @@ sdk使用指南：
     changeAddr为utxoForFee的找零地址，
     signFn为发起者的签名回调函数。
 
-### async setTreasuryCheckVH(newTreasuryCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn)
+### async setTreasuryCheckVH(newTreasuryCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn) ----  GroupNFT@GroupNFTHolder：update
     newTreasuryCheckVH为要设置的新的TreasuryCheck scriptHash,
     mustSignBy为本交易必须要签名的地址列表，
     utxoForFee为支付交易Fee的utxo,
@@ -36,7 +36,7 @@ sdk使用指南：
     changeAddr为utxoForFee的找零地址，
     signFn为发起者的签名回调函数。
 
-### async setMintCheckVH(newMintCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn)
+### async setMintCheckVH(newMintCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn) ----  GroupNFT@GroupNFTHolder：update
     newMintCheckVH 为要设置的新的MintCheck scriptHash,
     mustSignBy为本交易必须要签名的地址列表，
     utxoForFee为支付交易Fee的utxo,
@@ -44,7 +44,7 @@ sdk使用指南：
     changeAddr为utxoForFee的找零地址，
     signFn为发起者的签名回调函数。
 
-### async setStakeCheckVH(newStackCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn)
+### async setStakeCheckVH(newStackCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn) ----  GroupNFT@GroupNFTHolder：update
     newStackCheckVH 为要设置的新的 StackCheck scriptHash,
     mustSignBy为本交易必须要签名的地址列表，
     utxoForFee为支付交易Fee的utxo,
@@ -52,7 +52,7 @@ sdk使用指南：
     changeAddr为utxoForFee的找零地址，
     signFn为发起者的签名回调函数。
 
-### async delegate(pool, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn)
+### async delegate(pool, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn) ---- UTXO@StakeCheck: DelegateStake
     pool 此次delegate 的pool地址,
     mustSignBy为本交易必须要签名的地址列表，
     utxoForFee为支付交易Fee的utxo,
@@ -60,7 +60,7 @@ sdk使用指南：
     changeAddr为utxoForFee的找零地址，
     signFn为发起者的签名回调函数。
 
-### async claim(amount,receiptor, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn)
+### async claim(amount,receiptor, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn) ---- UTXO@StakeCheck: Withdrawal
     amount claim的数量,
     mustSignBy为本交易必须要签名的地址列表，
     utxoForFee为支付交易Fee的utxo,
@@ -68,13 +68,13 @@ sdk使用指南：
     changeAddr为utxoForFee的找零地址，
     signFn为发起者的签名回调函数。
 
-### async deregister(mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn)
+### async deregister(mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn) ---- UTXO@StakeCheck: DeregisterStake
     mustSignBy为本交易必须要签名的地址列表，
     utxoForFee为支付交易Fee的utxo,
     utxoForCollaterals为交易保证金,
     changeAddr为utxoForFee的找零地址，
     signFn为发起者的签名回调函数。
-### mintTreasuryCheckToken(amount, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn)
+### mintTreasuryCheckToken(amount, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn) --- CheckToken/TreasuryCheck@TreasuryCheck：Mint
     amount mint的TreasuryCheckToken数量,
     mustSignBy为本交易必须要签名的地址列表，
     utxoForFee为支付交易Fee的utxo,
@@ -82,7 +82,7 @@ sdk使用指南：
     changeAddr为utxoForFee的找零地址，
     signFn为发起者的签名回调函数。
 
-### mintMintCheckToken(amount, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn)
+### mintMintCheckToken(amount, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn) --- CheckToken/MintCheck@MintCheck：Mint
     amount mint的MintCheckToken数量,
     mustSignBy为本交易必须要签名的地址列表，
     utxoForFee为支付交易Fee的utxo,
