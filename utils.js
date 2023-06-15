@@ -1,4 +1,8 @@
-const CardanoWasm = require('@emurgo/cardano-serialization-lib-nodejs');
+let CardanoWasm = null;
+
+module.exports.setWasm = function(wasm) {
+  CardanoWasm = wasm;
+}
 
 module.exports.initProtocolParams = function (protocolParams, interVia = 'ogmios') {
     if (interVia == 'ogmios') {

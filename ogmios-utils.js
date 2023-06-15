@@ -4,9 +4,12 @@ const {
     createStateQueryClient,
     createTxSubmissionClient, TxSubmission
 } = require('@cardano-ogmios/client');
-const CardanoWasm = require('@emurgo/cardano-serialization-lib-nodejs');
 
+let CardanoWasm = null;
 
+module.exports.setWasm = function(wasm) {
+  CardanoWasm = wasm;
+}
 
 //---------------------------------------------------------------------------------------------
 let context;

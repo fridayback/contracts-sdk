@@ -1,11 +1,14 @@
-const CardanoWasm = require('@emurgo/cardano-serialization-lib-nodejs');
 const jsSHA = require("jssha");
 const utils = require('./utils');
 const BigNumber = require('bignumber.js');
-
 const plutus = require('./plutus');
-
 const contractMgr = require('./contracts-mgr');
+
+let CardanoWasm = null;
+
+function setWasm(wasm) {
+  CardanoWasm = wasm;
+}
 
 // let groupInfoTokenPlutus;
 // let groupInfoTokenHolderPlutus;
@@ -2117,6 +2120,7 @@ function init(network = true) {
 
 
 module.exports = {
+    setWasm,
     init,
     // GroupInfoNFTHolderScript,
     // GroupInfoTokenName,

@@ -1,10 +1,13 @@
-const CardanoWasm = require('@emurgo/cardano-serialization-lib-nodejs');
 const utils = require('./utils');
 const ogmiosUtils = require('./ogmios-utils');
-
 const contracts = require('./contracts');
 const contractsMgr = require('./contracts-mgr');
 
+let CardanoWasm = null;
+
+function setWasm(wasm) {
+  CardanoWasm = wasm;
+}
 
 const ACTION_DELEGATE = 0;
 const ACTION_CLAIM = 1;
@@ -375,4 +378,7 @@ class ContractSdk {
 
 }
 
-module.exports = ContractSdk
+module.exports = {
+  setWasm,
+  ContractSdk
+}
