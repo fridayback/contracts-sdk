@@ -147,6 +147,7 @@ function showGroupInfo(groupInfo) {
     console.log(JSON.stringify(ret));
 }
 
+const stakeAddr = 'stake_test17p8g82t994mpvlvj3xcephhn2fmtasnzlvxdrr92fgyrt4gw25zwy';
 async function main() {
     // const sdk = new ContractSdk(false);
     await sdk.init(host, 1337);
@@ -164,23 +165,31 @@ async function main() {
     //     console.log('after setOracleWorker:', JSON.stringify(showGroupInfo(groupInfo)));
     // }
 
-    {
-        console.log('amount before mint:', (await getCheckTokenUtxo(0)).length);
-        const utxosForFee = await getUtxoForFee();
-        signedTx = await sdk.mintTreasuryCheckToken(2, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn);
-        o = await submitAndWaitConfirmed(signedTx);
-        console.log('amount after mint:', (await getCheckTokenUtxo(0)).length);
-    }
+    // {
+    //     console.log('amount before mint:', (await getCheckTokenUtxo(0)).length);
+    //     const utxosForFee = await getUtxoForFee();
+    //     const signedTx = await sdk.mintTreasuryCheckToken(2, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn);
+    //     const o = await submitAndWaitConfirmed(signedTx);
+    //     console.log('amount after mint:', (await getCheckTokenUtxo(0)).length);
+    // }
+
+    // {
+    //     console.log('amount before mint:', (await getCheckTokenUtxo(1)).length);
+    //     const utxosForFee = await getUtxoForFee();
+    //     const signedTx = await sdk.mintMintCheckToken(2, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn);
+    //     const o = await submitAndWaitConfirmed(signedTx);
+    //     console.log('amount before mint:', (await getCheckTokenUtxo(1)).length);
+    // }
 
     {
-        console.log('amount before mint:', (await getCheckTokenUtxo(1)).length);
-        const utxosForFee = await getUtxoForFee();
-        signedTx = await sdk.mintMintCheckToken(2, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn);
-        o = await submitAndWaitConfirmed(signedTx);
-        console.log('amount before mint:', (await getCheckTokenUtxo(1)).length);
+        let os = await getCheckTokenUtxo(0);
+        console.log('amount before burn:', os.length);
+        const utxpSpend = os.slice(0,2);
+        const utxosForFee = await getUtxoForFee(); 
+        const signedTx = await sdk.burnTreasuryCheckToken(mustSignBy,utxosForFee,[collateralUtxo],utxpSpend,admin,signFn);
+        const o = await submitAndWaitConfirmed(signedTx);
+        console.log('after before burn:', (await getCheckTokenUtxo(0)).length);
     }
-
-
 
 }
 
