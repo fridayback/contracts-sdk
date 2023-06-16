@@ -166,13 +166,13 @@ class ContractSdk {
                 }
 
                 signedTx = await contractsMgr.AdminNFTHolderScript.update(
-                    protocolParamsGlobal, utxosForFee, utxoForCollateral, [adminNftUtxo]
+                    protocolParamsGlobal, utxosForFee, utxoForCollateral, adminNftUtxo
                     , adminNftHoldRefScript, changeAddr, signatories, setParam.minNumSignatures, signFn, mustSignBy);
                 break;
             }
             case contractsMgr.AdminNFTHolderScript.upgrade: {
                 signedTx = await contractsMgr.AdminNFTHolderScript.upgrade(
-                    protocolParamsGlobal, utxosForFee, utxoForCollateral, [adminNftUtxo]
+                    protocolParamsGlobal, utxosForFee, utxoForCollateral, adminNftUtxo
                     , adminNftHoldRefScript, changeAddr, setParam.owner, setParam.datum, signFn, mustSignBy);
                 break;
             }
