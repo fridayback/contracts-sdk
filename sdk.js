@@ -28,22 +28,20 @@ class ContractSdk {
     }
 
     async init(ogmiosHost, ogmiosPort = 1337) {
-
         await ogmiosUtils.init_ogmios({ host: ogmiosHost, port: ogmiosPort });
-        this.groupInfoHolderRef = await this.getScriptRefUtxo(contractsMgr.GroupInfoNFTHolderScript.script());
-        this.adminNftHoldRefScript = await this.getScriptRefUtxo(contractsMgr.AdminNFTHolderScript.script());
-        this.stakeScriptRefUtxo = await this.getScriptRefUtxo(contractsMgr.StoremanStackScript.script());
-        this.stakeCheckScriptRefUtxo = await this.getScriptRefUtxo(contractsMgr.StakeCheckScript.script());
-        this.mintChecTokenscriptRefUtxo = await this.getScriptRefUtxo(contracts.MintCheckTokenScript.script());
-        this.treasuryChecTokenscriptRefUtxo = await this.getScriptRefUtxo(contracts.TreasuryCheckTokenScript.script());
-        this.treasuryCheckScriptRefUtxo = await this.getScriptRefUtxo(contracts.TreasuryCheckScript.script());
-        this.mintCheckScriptRefUtxo = await this.getScriptRefUtxo(contracts.MintCheckScript.script());
+        let refUtxo = await ogmiosUtils.getUtxo(this.scriptRefOwnerAddr);
+        this.groupInfoHolderRef = this.getScriptRefUtxo(refUtxo, contractsMgr.GroupInfoNFTHolderScript.script());
+        this.adminNftHoldRefScript = this.getScriptRefUtxo(refUtxo, contractsMgr.AdminNFTHolderScript.script());
+        this.stakeScriptRefUtxo = this.getScriptRefUtxo(refUtxo, contractsMgr.StoremanStackScript.script());
+        this.stakeCheckScriptRefUtxo = this.getScriptRefUtxo(refUtxo, contractsMgr.StakeCheckScript.script());
+        this.mintChecTokenscriptRefUtxo = this.getScriptRefUtxo(refUtxo, contracts.MintCheckTokenScript.script());
+        this.treasuryChecTokenscriptRefUtxo = this.getScriptRefUtxo(refUtxo, contracts.TreasuryCheckTokenScript.script());
+        this.treasuryCheckScriptRefUtxo = this.getScriptRefUtxo(refUtxo, contracts.TreasuryCheckScript.script());
+        this.mintCheckScriptRefUtxo = this.getScriptRefUtxo(refUtxo, contracts.MintCheckScript.script());
     }
 
-    async getScriptRefUtxo(script) {
-        let refUtxo = await ogmiosUtils.getUtxo(this.scriptRefOwnerAddr);
-        const ref = refUtxo.find(o => script.to_hex().indexOf(o.script['plutus:v2']) >= 0);
-        return ref;
+    getScriptRefUtxo(refUtxo, script) {
+        return refUtxo.find(o => script.to_hex().indexOf(o.script['plutus:v2']) >= 0);
     }
 
     async getGroupInfoNft() {
