@@ -952,7 +952,7 @@ class TreasuryScript {
                 const totalChange = assetsTmp.get_asset(CardanoWasm.ScriptHash.from_hex(policy_id), assetName).to_str() * 1;
                 const totalAda = valueOutputOfTreasury.coin().to_str() * 1;
                 const tokenAmountPerUtxo = Math.floor(totalChange / outputCount);
-                const adaAmountPerUtxo = Math.floor(totalChange / outputCount);
+                const adaAmountPerUtxo = Math.floor(totalAda / outputCount);
                 changeValuePerUtxo = utils.funValue({ coins: adaAmountPerUtxo, assets: { [redeemProof.tokenId]: tokenAmountPerUtxo } });
                 changeValueLastUtxo = utils.funValue({ coins: totalAda - adaAmountPerUtxo * (outputCount - 1), assets: { [redeemProof.tokenId]: totalChange - tokenAmountPerUtxo * (outputCount - 1) } });
                 const minAda = utils.getMinAdaOfUtxo(protocolParams, TreasuryScript.address(groupInfo[contractMgr.GroupNFT.StkVh]), changeValuePerUtxo, datum42);
@@ -1917,16 +1917,18 @@ class CheckTokenScriptBase {
         txBuilder.add_change_if_needed(CardanoWasm.Address.from_bech32(changeAddress));
 
         let tx = txBuilder.build_tx();
-        const body = tx.body();
-        const txHash = CardanoWasm.hash_transaction(body);
-        const signResult = await signFn(txHash.to_hex());
-
-        const vkeyWitnesses = CardanoWasm.Vkeywitnesses.new();
-        const vkeyWitness = CardanoWasm.Vkeywitness.from_json(JSON.stringify(signResult));
-        vkeyWitnesses.add(vkeyWitness);
 
         const witnessSet = CardanoWasm.TransactionWitnessSet.from_bytes(tx.witness_set().to_bytes());
-        witnessSet.set_vkeys(vkeyWitnesses);
+        if (signFn) {
+            const body = tx.body();
+            const txHash = CardanoWasm.hash_transaction(body);
+            const signResult = await signFn(txHash.to_hex());
+            const vkeyWitnesses = CardanoWasm.Vkeywitnesses.new();
+            const vkeyWitness = CardanoWasm.Vkeywitness.from_json(JSON.stringify(signResult));
+            vkeyWitnesses.add(vkeyWitness);
+            witnessSet.set_vkeys(vkeyWitnesses);
+        }
+
 
         return CardanoWasm.Transaction.new(tx.body(), witnessSet, rawMetaData);
     }

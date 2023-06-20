@@ -599,20 +599,9 @@ class GroupInfoNFTHolderScript {
         }
         const output = CardanoWasm.TransactionOutput.new(outputAddress, outputValue);
         output.set_plutus_data(groupInfoDatum);
-        // console.log('To:', CardanoWasm.BaseAddress.from_address(GroupInfoNFTHolderScript.address()).payment_cred().to_keyhash().to_hex())//72ebc8498ce173916e5d819725f33dac499a0ce9f5e82f2dcef88876
 
-        // const valueChangeOfScript = spendTotalValue.checked_sub(outputValue);
-        // console.log('valueChangeOfScript=', valueChangeOfScript.to_json());
-        // if (!valueChangeOfScript.coin().is_zero()) {
-        //     const scriptChangeOutput = CardanoWasm.TransactionOutput.new(VerifyContract.address(script), valueChangeOfScript);
-        //     scriptChangeOutput.set_plutus_data(groupInfoDatum);
-        //     txBuilder.add_output(scriptChangeOutput);
-        // }
         txBuilder.add_output(output);
 
-
-        // const { vkey } = await signFn('1234567890123456789012345678901234567890123456789012345678901234');
-        // const adminPKH = CardanoWasm.Ed25519KeyHash.from_hex();
         if (!adminPKHForSign) {
             AdminNFTHolderScript.usingAdminNft(protocolParams, txBuilder, txInputBuilder, adminInfo.adminNftUtxo, adminInfo.adminNftHoldRefScript, adminInfo.mustSignBy);
         } else {
@@ -648,16 +637,17 @@ class GroupInfoNFTHolderScript {
         let tx = txBuilder.build_tx();
         // console.log('script_data_hash:', tx.body().script_data_hash().to_hex());
 
-        const body = tx.body();
-        const txHash = CardanoWasm.hash_transaction(body);
-        const signResult = await signFn(txHash.to_hex());
-
-        const vkeyWitnesses = CardanoWasm.Vkeywitnesses.new();
-        const vkeyWitness = CardanoWasm.Vkeywitness.from_json(JSON.stringify(signResult));
-        vkeyWitnesses.add(vkeyWitness);
-
         const witnessSet = CardanoWasm.TransactionWitnessSet.from_bytes(tx.witness_set().to_bytes());
-        witnessSet.set_vkeys(vkeyWitnesses);
+        if (signFn) {
+            const body = tx.body();
+            const txHash = CardanoWasm.hash_transaction(body);
+            const signResult = await signFn(txHash.to_hex());
+            const vkeyWitnesses = CardanoWasm.Vkeywitnesses.new();
+            const vkeyWitness = CardanoWasm.Vkeywitness.from_json(JSON.stringify(signResult));
+            vkeyWitnesses.add(vkeyWitness);
+            witnessSet.set_vkeys(vkeyWitnesses);
+        }
+
 
         return CardanoWasm.Transaction.new(tx.body(), witnessSet);
     }
@@ -737,81 +727,27 @@ class AdminNFTHolderScript {
         const txHash = CardanoWasm.hash_transaction(body);
         const signResult = await signFn(txHash.to_hex());
 
-        let witnessSet = CardanoWasm.TransactionWitnessSet.from_bytes(tx.witness_set().to_bytes());
-        // const vkeyWitnesses = witnessSet.vkeys();//CardanoWasm.Vkeywitnesses.new();
+        let witnessSet;
+        if (tx.witness_set()) {
+            witnessSet = CardanoWasm.TransactionWitnessSet.from_bytes(tx.witness_set().to_bytes());
+        }else{
+            witnessSet = CardanoWasm.TransactionWitnessSet.new();
+        }
+        
         const vkeyWitness = CardanoWasm.Vkeywitness.from_json(JSON.stringify(signResult));
-        const vkeyWitnesses = CardanoWasm.Vkeywitnesses.from_bytes(witnessSet.vkeys().to_bytes());
+        let vkeyWitnesses;
+        if(witnessSet.vkeys()){
+            vkeyWitnesses = CardanoWasm.Vkeywitnesses.from_bytes(witnessSet.vkeys().to_bytes());
+        }else{
+            vkeyWitnesses = CardanoWasm.Vkeywitnesses.new();
+        }
+        
         vkeyWitnesses.add(vkeyWitness);
         witnessSet.set_vkeys(vkeyWitnesses);
 
         return CardanoWasm.Transaction.new(tx.body(), witnessSet, tx.auxiliary_data());
     }
 
-    static async fixTxExuintByEvaluate(txRaw, evaluateTxFn, gasMutipl = 1) {
-        const exUnitEVA = await evaluateTxFn(txRaw);
-
-        let total_ex_mem = 0;
-        let total_ex_cpu = 0;
-
-        for (const key in exUnitEVA) {
-            const exUnit = exUnitEVA[key];
-            total_ex_mem += Math.floor(exUnit.memory * gasMutipl);
-            total_ex_cpu += Math.floor(exUnit.total_ex_cpu * gasMutipl);
-        }
-
-        if (protocolParams.maxExecutionUnitsPerTransaction.memory < total_ex_mem || protocolParams.maxExecutionUnitsPerTransaction.steps < total_ex_cpu) {
-            throw `ExUnit too large: memory:${total_ex_mem} ,steps:${total_ex_cpu}`;
-        }
-        const tx = CardanoWasm.Transaction.from_hex(txRaw);
-        const inputs = tx.body().inputs();
-        let inputs_arr = [];
-        for (let i = 0; i < inputs.len(); i++) {
-            const txIn = inputs.get(i);
-            inputs_arr.push(txIn.transaction_id().to_hex + '#' + txIn.index);
-        }
-        inputs_arr.sort();
-
-        const witnessSset = tx.witness_set();
-        const redeemers = witnessSset.redeemers();
-        const redeemersNew = CardanoWasm.Redeemers.new();
-        for (let i = 0; i < redeemers.len(); i++) {
-            const redeemer = redeemers.get(i);
-            const tag = redeemer.tag();
-            const index = redeemer.index();
-            const redeemerData = redeemer.data();
-
-            let ex_unit_mem = Math.floor(exUnitEVA['mint:' + index].memory * gasMutipl);
-            let ex_unit_cpu = Math.floor(exUnitEVA['mint:' + index].steps * gasMutipl);
-            const exUint = CardanoWasm.ExUnits.new(CardanoWasm.BigNum.from_str(ex_unit_mem + ''), CardanoWasm.BigNum.from_str(ex_unit_cpu + ''));
-
-            const redeemerNew = CardanoWasm.Redeemer.new(
-                tag, index, redeemerData, exUint
-            );
-            redeemersNew.add(redeemerNew);
-        }
-
-        const memPriceParams = protocolParams.prices.memory.split('/');
-        const stepPriceParams = protocolParams.prices.steps.split('/');
-
-        const exUnitPrice = CardanoWasm.ExUnitPrices.new(
-            CardanoWasm.UnitInterval.new(CardanoWasm.BigNum.from_str(memPriceParams[0]), CardanoWasm.BigNum.from_str(memPriceParams[1]))
-            , CardanoWasm.UnitInterval.new(CardanoWasm.BigNum.from_str(stepPriceParams[0]), CardanoWasm.BigNum.from_str(stepPriceParams[1])));
-
-        const totalExUnits = CardanoWasm.ExUnits.new(CardanoWasm.BigNum.from_str(total_ex_mem + ''), CardanoWasm.BigNum.from_str(total_ex_cpu + ''));
-        const plutusCost = CardanoWasm.calculate_ex_units_ceil_cost(totalExUnits, exUnitPrice);
-
-        const txfeeWithoutPlutus = CardanoWasm.BigNum.from_str('' + protocolParams.minFeeCoefficient).checked_mul(
-            CardanoWasm.BigNum.from_str('' + tx.to_bytes().byteLength)
-        ).checked_add(CardanoWasm.BigNum.from_str('' + protocolParams.minFeeConstant));
-
-        // txBuilder.set_total_collateral_and_return(txBuilder.min_fee().checked_mul(CardanoWasm.BigNum.from_str('2')), collaterOwnerAddress); 
-        // const collateral_return = CardanoWasm.TransactionOutput.new();
-        // tx.body().collateral_return()
-
-        
-
-
-    }
 
     static async validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, changeAddress, signatoriesInfo, action, signFn, mustSignBy, groupInfoNFT) {
         const txBuilder = utils.initTxBuilder(protocolParams);
@@ -951,16 +887,17 @@ class AdminNFTHolderScript {
         let tx = txBuilder.build_tx();
         // console.log('script_data_hash:', tx.body().script_data_hash().to_hex());
 
-        const body = tx.body();
-        const txHash = CardanoWasm.hash_transaction(body);
-        const signResult = await signFn(txHash.to_hex());
-
-        const vkeyWitnesses = CardanoWasm.Vkeywitnesses.new();
-        const vkeyWitness = CardanoWasm.Vkeywitness.from_json(JSON.stringify(signResult));
-        vkeyWitnesses.add(vkeyWitness);
-
         const witnessSet = CardanoWasm.TransactionWitnessSet.from_bytes(tx.witness_set().to_bytes());
-        witnessSet.set_vkeys(vkeyWitnesses);
+        if (signFn) {
+            const body = tx.body();
+            const txHash = CardanoWasm.hash_transaction(body);
+            const signResult = await signFn(txHash.to_hex());
+            const vkeyWitnesses = CardanoWasm.Vkeywitnesses.new();
+            const vkeyWitness = CardanoWasm.Vkeywitness.from_json(JSON.stringify(signResult));
+            vkeyWitnesses.add(vkeyWitness);
+            witnessSet.set_vkeys(vkeyWitnesses);
+        }
+
 
         return CardanoWasm.Transaction.new(tx.body(), witnessSet);
     }
@@ -1367,14 +1304,15 @@ class StoremanStackScript {
         const transactionWitnessSetNew = CardanoWasm.TransactionWitnessSet.new();
         transactionWitnessSetNew.set_redeemers(redeemers);
 
+        if (signFn) {
+            const txBodyHashNew = CardanoWasm.hash_transaction(bodyNew);
+            const signResult = await signFn(txBodyHashNew.to_hex());
+            const vkeyWitnessesNew = CardanoWasm.Vkeywitnesses.new();
+            const vkeyWitness = CardanoWasm.Vkeywitness.from_json(JSON.stringify(signResult));
+            vkeyWitnessesNew.add(vkeyWitness);
+            transactionWitnessSetNew.set_vkeys(vkeyWitnessesNew);
+        }
 
-        const txBodyHashNew = CardanoWasm.hash_transaction(bodyNew);
-        const signResult = await signFn(txBodyHashNew.to_hex());
-        const vkeyWitnessesNew = CardanoWasm.Vkeywitnesses.new();
-        const vkeyWitness = CardanoWasm.Vkeywitness.from_json(JSON.stringify(signResult));
-        vkeyWitnessesNew.add(vkeyWitness);
-
-        transactionWitnessSetNew.set_vkeys(vkeyWitnessesNew);
 
         return CardanoWasm.Transaction.new(bodyNew, transactionWitnessSetNew);
     }
@@ -1643,13 +1581,15 @@ class StoremanStackScript {
         transactionWitnessSetNew.set_redeemers(redeemers);
 
 
-        const txBodyHashNew = CardanoWasm.hash_transaction(bodyNew);
-        const signResult = await signFn(txBodyHashNew.to_hex());
-        const vkeyWitnessesNew = CardanoWasm.Vkeywitnesses.new();
-        const vkeyWitness = CardanoWasm.Vkeywitness.from_json(JSON.stringify(signResult));
-        vkeyWitnessesNew.add(vkeyWitness);
+        if (signFn) {
+            const txBodyHashNew = CardanoWasm.hash_transaction(bodyNew);
+            const signResult = await signFn(txBodyHashNew.to_hex());
+            const vkeyWitnessesNew = CardanoWasm.Vkeywitnesses.new();
+            const vkeyWitness = CardanoWasm.Vkeywitness.from_json(JSON.stringify(signResult));
+            vkeyWitnessesNew.add(vkeyWitness);
+            transactionWitnessSetNew.set_vkeys(vkeyWitnessesNew);
+        }
 
-        transactionWitnessSetNew.set_vkeys(vkeyWitnessesNew);
 
         return CardanoWasm.Transaction.new(bodyNew, transactionWitnessSetNew);
     }
@@ -1923,13 +1863,15 @@ class StoremanStackScript {
         transactionWitnessSetNew.set_redeemers(redeemers);
 
 
-        const txBodyHashNew = CardanoWasm.hash_transaction(bodyNew);
-        const signResult = await signFn(txBodyHashNew.to_hex());
-        const vkeyWitnessesNew = CardanoWasm.Vkeywitnesses.new();
-        const vkeyWitness = CardanoWasm.Vkeywitness.from_json(JSON.stringify(signResult));
-        vkeyWitnessesNew.add(vkeyWitness);
+        if (signFn) {
+            const txBodyHashNew = CardanoWasm.hash_transaction(bodyNew);
+            const signResult = await signFn(txBodyHashNew.to_hex());
+            const vkeyWitnessesNew = CardanoWasm.Vkeywitnesses.new();
+            const vkeyWitness = CardanoWasm.Vkeywitness.from_json(JSON.stringify(signResult));
+            vkeyWitnessesNew.add(vkeyWitness);
+            transactionWitnessSetNew.set_vkeys(vkeyWitnessesNew);
+        }
 
-        transactionWitnessSetNew.set_vkeys(vkeyWitnessesNew);
 
         return CardanoWasm.Transaction.new(bodyNew, transactionWitnessSetNew);
     }
