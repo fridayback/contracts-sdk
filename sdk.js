@@ -63,7 +63,7 @@ class ContractSdk {
         return adminNftUtxo;
     }
 
-    async invokeGroupInfoHolder(action, setParam, mustSignByAddrs, utxosForFee, utxoForCollateral, changeAddr, signFn) {
+    async invokeGroupInfoHolder(action, setParam, mustSignByAddrs, utxosForFee, utxoForCollateral, changeAddr, signFn, exUnitTx) {
         const groupInfoUtxo = await this.getGroupInfoNft();
         const adminNftUtxo = await this.getAdminNft();
         const adminNftHoldRefScript = this.adminNftHoldRefScript;
@@ -86,42 +86,42 @@ class ContractSdk {
                 const newOracleWorker = utils.addressToPkhOrScriptHash(setParam);
 
                 signedTx = await contractsMgr.GroupInfoNFTHolderScript.setOracleWorker(
-                    protocolParamsGlobal, utxosForFee, utxoForCollateral, [groupInfoUtxo]
+                    protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
                     , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
-                    , newOracleWorker, changeAddr, undefined, signFn);
+                    , newOracleWorker, changeAddr, undefined, signFn, exUnitTx);
                 break;
             }
             case contractsMgr.GroupNFT.TreasuryCheckVH: {
                 signedTx = await contractsMgr.GroupInfoNFTHolderScript.setTreasuryCheckVH(
-                    protocolParamsGlobal, utxosForFee, utxoForCollateral, [groupInfoUtxo]
+                    protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
                     , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
-                    , setParam, changeAddr, undefined, signFn);
+                    , setParam, changeAddr, undefined, signFn, exUnitTx);
                 break;
             }
             case contractsMgr.GroupNFT.MintCheckVH: {
                 signedTx = await contractsMgr.GroupInfoNFTHolderScript.setMintCheckVH(
                     protocolParamsGlobal, utxosForFee, utxoForCollateral, [groupInfoUtxo]
                     , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
-                    , setParam, changeAddr, undefined, signFn);
+                    , setParam, changeAddr, undefined, signFn, exUnitTx);
                 break;
             }
             // case contractsMgr.GroupNFT.StkVh: {
             //     signedTx = await contractsMgr.GroupInfoNFTHolderScript.setStakeVH(
-            //         protocolParamsGlobal, utxosForFee, utxoForCollateral, [groupInfoUtxo]
+            //         protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
             //         , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
             //         , setParam, changeAddr, undefined, signFn);
             //     break;
             // }
             case contractsMgr.GroupNFT.StkCheckVh: {
                 signedTx = await contractsMgr.GroupInfoNFTHolderScript.setStakeCheckVH(
-                    protocolParamsGlobal, utxosForFee, utxoForCollateral, [groupInfoUtxo]
+                    protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
                     , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
-                    , setParam, changeAddr, undefined, signFn);
+                    , setParam, changeAddr, undefined, signFn, exUnitTx);
                 break;
             }
             // case contractsMgr.GroupNFT.Version: {
             //     signedTx = await contractsMgr.GroupInfoNFTHolderScript.setVersion(
-            //         protocolParamsGlobal, utxosForFee, utxoForCollateral, [groupInfoUtxo]
+            //         protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
             //         , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
             //         , setParam, changeAddr, undefined, signFn);TODO
             //     break;
@@ -134,7 +134,7 @@ class ContractSdk {
         return signedTx;
     }
 
-    async invokeAdminNftHolder(action, setParam, mustSignByAddrs, utxosForFee, utxoForCollateral, changeAddr, signFn) {
+    async invokeAdminNftHolder(action, setParam, mustSignByAddrs, utxosForFee, utxoForCollateral, changeAddr, signFn, exUnitTx) {
 
         const adminNftUtxo = await this.getAdminNft();
         const adminNftHoldRefScript = this.adminNftHoldRefScript;
@@ -161,13 +161,13 @@ class ContractSdk {
 
                 signedTx = await contractsMgr.AdminNFTHolderScript.update(
                     protocolParamsGlobal, utxosForFee, utxoForCollateral, adminNftUtxo
-                    , adminNftHoldRefScript, changeAddr, signatories, setParam.minNumSignatures, signFn, mustSignBy);
+                    , adminNftHoldRefScript, changeAddr, signatories, setParam.minNumSignatures, signFn, mustSignBy, exUnitTx);
                 break;
             }
             case contractsMgr.AdminNFTHolderScript.upgrade: {
                 signedTx = await contractsMgr.AdminNFTHolderScript.upgrade(
                     protocolParamsGlobal, utxosForFee, utxoForCollateral, adminNftUtxo
-                    , adminNftHoldRefScript, changeAddr, setParam.owner, setParam.datum, signFn, mustSignBy);
+                    , adminNftHoldRefScript, changeAddr, setParam.owner, setParam.datum, signFn, mustSignBy, exUnitTx);
                 break;
             }
             default:
@@ -178,25 +178,25 @@ class ContractSdk {
         return signedTx;
     }
 
-    async setAdmin(signatories, minNumSignatures, mustSignByAddrs, utxosForFee, utxoForCollateral, changeAddr, signFn = undefined) {
+    async setAdmin(signatories, minNumSignatures, mustSignByAddrs, utxosForFee, utxoForCollateral, changeAddr, signFn = undefined, exUnitTx = undefined) {
         return await this.invokeAdminNftHolder(contractsMgr.AdminNFTHolderScript.Update, { signatories, minNumSignatures }
-            , mustSignByAddrs, utxosForFee, utxoForCollateral, changeAddr, signFn);
+            , mustSignByAddrs, utxosForFee, utxoForCollateral, changeAddr, signFn, exUnitTx);
     }
 
-    async setOracleWorker(newOracleWorker, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined) {
-        return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.OracleWorker, newOracleWorker, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn);
+    async setOracleWorker(newOracleWorker, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.OracleWorker, newOracleWorker, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
     }
 
-    async setTreasuryCheckVH(newTreasuryCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined) {
-        return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.TreasuryCheckVH, newTreasuryCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn);
+    async setTreasuryCheckVH(newTreasuryCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.TreasuryCheckVH, newTreasuryCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
     }
 
-    async setMintCheckVH(newMintCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined) {
-        return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.MintCheckVH, newMintCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn);
+    async setMintCheckVH(newMintCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.MintCheckVH, newMintCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
     }
 
-    async setStakeCheckVH(newStackCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined) {
-        return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.StkCheckVh, newStackCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn);
+    async setStakeCheckVH(newStackCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.StkCheckVh, newStackCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
     }
 
     async addSignature(tx, signFn = undefined) {
@@ -205,7 +205,7 @@ class ContractSdk {
 
 
 
-    async invokeStoremanStake(action, param, mustSignByAddrs, utxosForFee, utxoForCollateral, changeAddr, signFn) {
+    async invokeStoremanStake(action, param, mustSignByAddrs, utxosForFee, utxoForCollateral, changeAddr, signFn,exUnitTx=undefined) {
         const goupInfoTokenUtxo = await getGroupInfoToken();
         const adminNftUtxo = await getAdminNft();
 
@@ -234,19 +234,19 @@ class ContractSdk {
             case ACTION_DELEGATE: {
                 signedTx = await contractsMgr.StoremanStackScript.delegate(protocolParamsGlobal, utxosForFee, changeAddr, utxoForCollateral
                     , goupInfoTokenUtxo, param, this.stakeScriptRefUtxo, this.stakeCheckScriptRefUtxo, stakeCheckUtxo
-                    , adminNftUtxo, this.adminNftHoldRefScript, mustSignBy, signFn);
+                    , adminNftUtxo, this.adminNftHoldRefScript, mustSignBy, signFn,exUnitTx);
                 break;
             }
             case ACTION_CLAIM: {
                 signedTx = await contractsMgr.StoremanStackScript.claim(protocolParamsGlobal, utxosForFee, changeAddr, utxoForCollateral
                     , goupInfoTokenUtxo, stakeScriptRefUtxo, stakeCheckScriptRefUtxo, stakeCheckUtxo
-                    , adminNftUtxo, adminNftHoldRefScript, mustSignBy, signFn, param.claimTo, param.claimAmount);
+                    , adminNftUtxo, adminNftHoldRefScript, mustSignBy, signFn, param.claimTo, param.claimAmount,exUnitTx);
                 break;
             }
             case ACTION_DEREGISTER: {
                 signedTx = await contractsMgr.StoremanStackScript.deregister(protocolParamsGlobal, utxosForFee, changeAddr, utxoForCollateral
                     , goupInfoTokenUtxo, stakeScriptRefUtxo, stakeCheckScriptRefUtxo, stakeCheckUtxo
-                    , adminNftUtxo, adminNftHoldRefScript, mustSignBy, signFn);
+                    , adminNftUtxo, adminNftHoldRefScript, mustSignBy, signFn,exUnitTx);
                 break;
             }
             default:
@@ -258,16 +258,16 @@ class ContractSdk {
 
     }
 
-    async delegate(pool, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined) {
-        return await this.invokeStoremanStake(ACTION_DELEGATE, pool, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn);
+    async delegate(pool, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined,exUnitTx=undefined) {
+        return await this.invokeStoremanStake(ACTION_DELEGATE, pool, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn,exUnitTx);
     }
 
-    async claim(amount, receiptor, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined) {
-        return await this.invokeStoremanStake(ACTION_CLAIM, { cliamTo: receiptor, claimAmount: amount }, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn);
+    async claim(amount, receiptor, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined,exUnitTx=undefined) {
+        return await this.invokeStoremanStake(ACTION_CLAIM, { cliamTo: receiptor, claimAmount: amount }, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn,exUnitTx);
     }
 
-    async deregister(mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined) {
-        return await this.invokeStoremanStake(ACTION_DEREGISTER, { cliamTo: receiptor, claimAmount: amount }, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn);
+    async deregister(mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined,exUnitTx=undefined) {
+        return await this.invokeStoremanStake(ACTION_DEREGISTER, { cliamTo: receiptor, claimAmount: amount }, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn,exUnitTx);
     }
 
     async mintTreasuryCheckToken(amount, mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined) {
@@ -318,7 +318,7 @@ class ContractSdk {
         return signedTx;
     }
 
-    async burnTreasuryCheckToken(mustSignByAddrs, utxosForFee, utxoForCollaterals, burnUtxos, changeAddr, signFn = undefined) {
+    async burnTreasuryCheckToken(mustSignByAddrs, utxosForFee, utxoForCollaterals, burnUtxos, changeAddr, signFn = undefined, exUnitTx = undefined) {
         const groupInfoUtxo = await this.getGroupInfoNft();
         // const groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(groupInfoUtxo.datum);
         const adminNftUtxo = await this.getAdminNft();
@@ -337,12 +337,12 @@ class ContractSdk {
         const signedTx = await contracts.TreasuryCheckScript.burn(protocolParamsGlobal, utxosForFee
             , utxoForCollaterals, burnUtxos, this.treasuryCheckScriptRefUtxo, this.treasuryChecTokenscriptRefUtxo
             , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }
-            , changeAddr, signFn);
+            , changeAddr, signFn, exUnitTx);
 
         return signedTx;
     }
 
-    async burnMintCheckToken(mustSignByAddrs, utxosForFee, utxoForCollaterals, burnUtxos, changeAddr, signFn = undefined) {
+    async burnMintCheckToken(mustSignByAddrs, utxosForFee, utxoForCollaterals, burnUtxos, changeAddr, signFn = undefined, exUnitTx = undefined) {
         const groupInfoUtxo = await this.getGroupInfoNft();
         // const groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(groupInfoUtxo.datum);
         const adminNftUtxo = await this.getAdminNft();
@@ -361,7 +361,7 @@ class ContractSdk {
         const signedTx = await contracts.MintCheckScript.burn(protocolParamsGlobal, utxosForFee
             , utxoForCollaterals, burnUtxos, this.mintCheckScriptRefUtxo, this.mintChecTokenscriptRefUtxo
             , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }
-            , changeAddr, signFn);
+            , changeAddr, signFn, exUnitTx);
 
         return signedTx;
     }
