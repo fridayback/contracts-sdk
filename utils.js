@@ -257,7 +257,9 @@ module.exports.funValue = function (valueMap) {
     // console.log(mutiAsset.to_json());
 
     let value = CardanoWasm.Value.new(CardanoWasm.BigNum.from_str('' + valueMap.coins));
-    value.set_multiasset(mutiAsset);
+    if (mutiAsset.len() > 0) {
+      value.set_multiasset(mutiAsset);
+    }
 
     return value;
 }
