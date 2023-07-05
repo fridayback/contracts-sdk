@@ -672,7 +672,41 @@ class GroupInfoNFTHolderScript {
             witnessSet.set_vkeys(vkeyWitnesses);
         }
 
-
+        {
+            let inputs = CardanoWasm.TransactionInputs.new();
+            let inputArr = [];
+            for (let i = 0; i < tx.body().inputs().len(); i++) {
+                inputArr.push(tx.body().inputs().get(i));
+            }
+            inputArr.sort((a, b) => {
+                const hashA = a.transaction_id().to_hex() + a.index();
+                const hashB = b.transaction_id().to_hex() + b.index();
+                return hashA.localeCompare(hashB);
+            })
+            for (let i = 0; i < inputArr.length; i++) {
+                inputs.add(inputArr[i]);
+            }
+            console.log('before sorting:', tx.to_json());
+            const newBody = CardanoWasm.TransactionBody.new(
+                inputs, tx.body().outputs(), tx.body().fee(), tx.body().ttl()
+            );
+            if (tx.body().auxiliary_data_hash()) newBody.set_auxiliary_data_hash(tx.body().auxiliary_data_hash());
+            if (tx.body().certs()) newBody.set_certs(tx.body().certs());
+            if (tx.body().collateral()) newBody.set_collateral(tx.body().collateral());
+            if (tx.body().collateral_return()) newBody.set_collateral_return(tx.body().collateral_return());
+            if (tx.body().mint()) newBody.set_mint(tx.body().mint());
+            // if(tx.body().multiassets()) newBody.set(tx.body().multiassets());
+            if (tx.body().network_id()) newBody.set_network_id(tx.body().network_id());
+            if (tx.body().reference_inputs()) newBody.set_reference_inputs(tx.body().reference_inputs());
+            if (tx.body().required_signers()) newBody.set_required_signers(tx.body().required_signers());
+            if (tx.body().script_data_hash()) newBody.set_script_data_hash(tx.body().script_data_hash());
+            if (tx.body().total_collateral()) newBody.set_total_collateral(tx.body().total_collateral());
+            if (tx.body().update()) newBody.set_update(tx.body().update());
+            if (tx.body().validity_start_interval()) newBody.set_validity_start_interval(tx.body().validity_start_interval());
+            if (tx.body().validity_start_interval_bignum()) newBody.set_validity_start_interval_bignum(tx.body().validity_start_interval_bignum());
+            if (tx.body().withdrawals()) newBody.set_withdrawals(tx.body().withdrawals());
+            return CardanoWasm.Transaction.new(newBody, witnessSet);
+        }
         return CardanoWasm.Transaction.new(tx.body(), witnessSet);
     }
 }
@@ -827,11 +861,11 @@ class AdminNFTHolderScript {
             CardanoWasm.BigNum.from_str(ex_unit_mem + ''),//(EX_UNIT_A),//TODO----->1854897
             CardanoWasm.BigNum.from_str(ex_unit_cpu + '')//(EX_UNIT_B)306405352 530107903
         );
-        if(exUnitTx){
+        if (exUnitTx) {
             const index = inputs_arr.indexOf(utxoToSpend.txHash + '#' + utxoToSpend.index);
             exUnits = CardanoWasm.ExUnits.new(
-                CardanoWasm.BigNum.from_str(exUnitTx['spend:'+index].memory + ''),
-                CardanoWasm.BigNum.from_str(exUnitTx['spend:'+index].steps + '')
+                CardanoWasm.BigNum.from_str(exUnitTx['spend:' + index].memory + ''),
+                CardanoWasm.BigNum.from_str(exUnitTx['spend:' + index].steps + '')
             );
         }
 
@@ -970,8 +1004,8 @@ class AdminNFTHolderScript {
             txInputBuilder.add_input(from, input, value);
 
         } else {
-            let ex_unit_mem = exUnitEVA ? exUnitEVA.memory : 2710110;//  4142333
-            let ex_unit_cpu = exUnitEVA ? exUnitEVA.steps : 789461911; //1447050275
+            let ex_unit_mem = exUnitEVA ? exUnitEVA.memory : 5075293;//  4142333
+            let ex_unit_cpu = exUnitEVA ? exUnitEVA.steps : 1664676406; //1447050275
             const exUnits = CardanoWasm.ExUnits.new(
                 CardanoWasm.BigNum.from_str(ex_unit_mem + ''),//(EX_UNIT_A),//TODO----->1854897
                 CardanoWasm.BigNum.from_str(ex_unit_cpu + '')//(EX_UNIT_B)306405352 530107903
@@ -984,10 +1018,15 @@ class AdminNFTHolderScript {
             );
 
             const scriptRefInput = CardanoWasm.TransactionInput.new(CardanoWasm.TransactionHash.from_bytes(Buffer.from(adminNftHoldRefScript.txHash, 'hex')), adminNftHoldRefScript.index);
-            const witness = CardanoWasm.PlutusWitness.new_with_ref(
+            // const witness = CardanoWasm.PlutusWitness.new_with_ref(
+            //     CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(AdminNFTHolderScript.script().hash(), scriptRefInput, CardanoWasm.Language.new_plutus_v2())
+            //     , CardanoWasm.DatumSource.new_ref_input(input)
+            //     , redeemer);
+
+            const witness = CardanoWasm.PlutusWitness.new_with_ref_without_datum(
                 CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(AdminNFTHolderScript.script().hash(), scriptRefInput, CardanoWasm.Language.new_plutus_v2())
-                , CardanoWasm.DatumSource.new_ref_input(input)
-                , redeemer);
+                , redeemer
+            )
             txInputBuilder.add_plutus_script_input(witness, input, value);
 
             const signatoriesInfo = this.getSignatoriesInfoFromDatum(utxoToSpend.datum);
@@ -1082,8 +1121,8 @@ class StoremanStackScript {
 
     static async delegate(protocolParams, utxosForFee, changeAddress, utxoForCollateral, groupInfoNft, pool, stakeScriptRef, stakeCheckRefScript, stakeCheckUtxo
         , adminNftUtxo, adminNftHoldRefScript, mustSignBy, signFn, exUnitTx) {
-        
-            const fee = CardanoWasm.BigNum.from_str('256907');//fake fee value 255499
+
+        const fee = CardanoWasm.BigNum.from_str('256907');//fake fee value 255499
 
         const payPrvKey = CardanoWasm.PrivateKey.from_normal_bytes(Buffer.from('0000000000000000000000000000000000000000000000000000000000000000', 'hex'));
 
@@ -1130,7 +1169,7 @@ class StoremanStackScript {
             const redeemerData = CardanoWasm.PlutusData.new_empty_constr_plutus_data(CardanoWasm.BigNum.from_str('0'));
             let mem = 2500000;
             let cpu = 870000000;
-            
+
             if (exUnitTx) {
                 mem = exUnitTx['certs:0'].memory;
                 cpu = exUnitTx['certs:0'].steps;
@@ -1422,9 +1461,9 @@ class StoremanStackScript {
             const redeemerData = CardanoWasm.PlutusData.new_empty_constr_plutus_data(CardanoWasm.BigNum.from_str('0'));
             let mem = 2503197;
             let cpu = 870405352;
-            if(exUnitTx){
-                mem = exUnitTx['rewards:0'].memory;
-                cpu = exUnitTx['rewards:0'].steps;
+            if (exUnitTx) {
+                mem = exUnitTx['withdrawal:0'].memory;
+                cpu = exUnitTx['withdrawal:0'].steps;
             }
             const exUnits = CardanoWasm.ExUnits.new(
                 CardanoWasm.BigNum.from_str(mem + ''),//(EX_UNIT_A),//TODO----->903197
@@ -1447,6 +1486,7 @@ class StoremanStackScript {
             const claimToAddr = CardanoWasm.Address.from_bech32(claimTo);
             const rewardOutput = CardanoWasm.TransactionOutput.new(claimToAddr, CardanoWasm.Value.new(CardanoWasm.BigNum.from_str('' + claimAmount)));
             outputs.add(rewardOutput);
+            outputsFinal.add(rewardOutput);
         }
 
         {// add StakeCheck 
@@ -1713,7 +1753,7 @@ class StoremanStackScript {
             const redeemerData = CardanoWasm.PlutusData.new_empty_constr_plutus_data(CardanoWasm.BigNum.from_str('0'));
             let mem = 2503197;
             let cpu = 870405352;
-            if(exUnitTx){
+            if (exUnitTx) {
                 mem = exUnitTx['certs:0'].memory;
                 cpu = exUnitTx['certs:0'].steps;
             }
