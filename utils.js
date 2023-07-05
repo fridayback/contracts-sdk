@@ -184,7 +184,8 @@ module.exports.getMinAdaOfUtxo = function (protocolParams, owner, value, datum, 
         checkedValue = CardanoWasm.Value.new(CardanoWasm.BigNum.from_str(minAdaWithToken + ''));
         checkedValue.set_multiasset(mutiAsset);
     } else {
-        if (value.coin().is_zero()) {
+        // console.log(value.to_json());
+        if (value.coin().less_than(CardanoWasm.BigNum.from_str('1000000'))) {
             // console.log('=====>',value.coin().to_str());
             value.set_coin(CardanoWasm.BigNum.from_str('1000000'));
         }
@@ -204,6 +205,7 @@ module.exports.getMinAdaOfUtxo = function (protocolParams, owner, value, datum, 
     if (refScript) {
         output.set_script_ref(CardanoWasm.ScriptRef.new_plutus_script(refScript));
     }
+    // console.log(output.to_json());
     // console.log('size=',output.to_bytes().byteLength+160);
 
     return (160 + output.to_bytes().byteLength) * protocolParams.coinsPerUtxoByte
@@ -235,6 +237,7 @@ module.exports.funValue = function (valueMap) {
 
     for (const assetId in valueMap.assets) {
         const assetValue = valueMap.assets[assetId];
+        if(assetValue*1 == 0) continue;
         let [policy_id, assetName] = assetId.split('.');
 
         let assets = policyAssets[policy_id];
@@ -253,8 +256,8 @@ module.exports.funValue = function (valueMap) {
     // console.log(mutiAsset.to_json());
 
     let value = CardanoWasm.Value.new(CardanoWasm.BigNum.from_str('' + valueMap.coins));
-    value.set_multiasset(mutiAsset);
-
+    if(mutiAsset.len() > 0) value.set_multiasset(mutiAsset);
+    // console.log(value.to_json());
     return value;
 }
 

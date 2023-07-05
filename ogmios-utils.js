@@ -6,7 +6,8 @@ const {
 } = require('@cardano-ogmios/client');
 const CardanoWasm = require('@emurgo/cardano-serialization-lib-nodejs');
 
-const utils = require('./utils')
+const utils = require('./utils');
+const cbor = require('cbor-sync');
 
 
 
@@ -80,6 +81,18 @@ module.exports.getParamProtocol = async function (via = 'ogmios') {
         // return protocolParams;
     }
 
+}
+
+module.exports.getScriptRefByScriptHash = async function (scriptRefOwnerAddr, scriptHash) {
+    let refUtxo = await this.getUtxo(scriptRefOwnerAddr);
+    const ref = refUtxo.find(o => {
+        const buf = Buffer.from(o.script['plutus:v2'], 'hex');
+        const cborHex = cbor.encode(buf, 'buffer');
+
+        return CardanoWasm.PlutusScript.from_bytes_v2(cborHex).hash().to_hex() == scriptHash
+
+    });
+    return ref;
 }
 
 //TODO: -------------------
@@ -186,19 +199,21 @@ module.exports.signFn = (skey, hash) => {
     return { vkey, signature };
 }
 
-module.exports.init_ogmios = async function (hostServer = { host: '127.0.0.1', port: 1337 }) {
+module.exports.init_ogmios = async function (hostServer = { host: '127.0.0.1', port: 1337, tls: false }) {
     let host = '127.0.0.1';
     let port = 1337;
+    let tls = false;
     if (hostServer) {
         if (hostServer.host) host = hostServer.host;
         if (hostServer.port) port = hostServer.port;
+        if (hostServer.tls) tls = hostServer.tls;
     }
-    context = await createInteractionContext(errorHandler, closeHandler, { connection: { host, port }, interactionType: 'LongRunning' });
+    context = await createInteractionContext(errorHandler, closeHandler, { connection: { host, port, tls }, interactionType: 'LongRunning' });
     txSubmitclient = await createTxSubmissionClient(context);
     query = await createStateQueryClient(context);
     const blockHeight = await query.blockHeight();
 
-    const ss = await this.getUtxo('addr_test1qz6twkzgss75sk379u0e27phvwhmtqqfuhl5gnx7rh7nux2xg4uwrhx9t58far8hp3a06hfdfzlsxgfrzqv5ryc78e4s4dwh26')
+    // const ss = await this.getUtxo('addr_test1qz6twkzgss75sk379u0e27phvwhmtqqfuhl5gnx7rh7nux2xg4uwrhx9t58far8hp3a06hfdfzlsxgfrzqv5ryc78e4s4dwh26')
     // console.log(ss);
     // // context.socket.close()
     // const fd = await query.eraStart();
@@ -436,7 +451,7 @@ module.exports.fixTxExuintByEvaluate = async function (protocolParams, txRaw, co
         const tmptx = CardanoWasm.Transaction.from_hex(txRaw);
         if (tmptx.witness_set().vkeys()) {
             witnessSset.set_vkeys(tmptx.witness_set().vkeys());
-        }else{
+        } else {
             witnessSset.set_vkeys(CardanoWasm.Vkeywitnesses.new());
         }
     }
