@@ -153,14 +153,14 @@ class TreasuryCheckScript {
             const redeemer = CardanoWasm.Redeemer.new(CardanoWasm.RedeemerTag.new_spend(), CardanoWasm.BigNum.from_str('0'), redeemerData, exUnits);
 
             const scriptHash = utils.addressToPkhOrScriptHash(utxo.address);
-            const witness = CardanoWasm.PlutusWitness.new_with_ref(CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(
-                CardanoWasm.ScriptHash.from_hex(scriptHash), scriptRefInput, CardanoWasm.Language.new_plutus_v2())
-                , CardanoWasm.DatumSource.new_ref_input(input)
-                , redeemer);
-            // const witness = CardanoWasm.PlutusWitness.new_with_ref_without_datum(
-            //     CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(CardanoWasm.ScriptHash.from_hex(scriptHash),scriptRefInput,CardanoWasm.Language.new_plutus_v2())
-            //     , redeemer
-            // )
+            // const witness = CardanoWasm.PlutusWitness.new_with_ref(CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(
+            //     CardanoWasm.ScriptHash.from_hex(scriptHash), scriptRefInput, CardanoWasm.Language.new_plutus_v2())
+            //     , CardanoWasm.DatumSource.new_ref_input(input)
+            //     , redeemer);
+            const witness = CardanoWasm.PlutusWitness.new_with_ref_without_datum(
+                CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(CardanoWasm.ScriptHash.from_hex(scriptHash),scriptRefInput,CardanoWasm.Language.new_plutus_v2())
+                , redeemer
+            )
 
             txInputBuilder.add_plutus_script_input(witness, input, value);
         }
