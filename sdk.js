@@ -19,9 +19,9 @@ class ContractSdk {
         this.allScriptRefUtxo = [];
     }
 
-    async init(ogmiosHost, ogmiosPort = 1337) {
+    async init(ogmiosHost, ogmiosPort = 1337,tls = false) {
 
-        await ogmiosUtils.init_ogmios({ host: ogmiosHost, port: ogmiosPort });
+        await ogmiosUtils.init_ogmios({ host: ogmiosHost, port: ogmiosPort ,tls:tls});
         this.groupInfoHolderRef = await this.getScriptRefUtxo(contractsMgr.GroupInfoNFTHolderScript.script());
         this.adminNftHoldRefScript = await this.getScriptRefUtxo(contractsMgr.AdminNFTHolderScript.script());
         this.stakeScriptRefUtxo = await this.getScriptRefUtxo(contractsMgr.StoremanStackScript.script());
