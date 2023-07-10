@@ -16,16 +16,23 @@ const ACTION_DEREGISTER = 2;
 
 class ContractSdk {
 
-    constructor(isMainnet = false, scriptRefOwnerAddr = 'addr_test1vq73yuplt9c5zmgw4ve7qhu49yxllw7q97h4smwvfgst32qrkwupd') {
+    constructor(isMainnet = false, scriptRefOwnerAddr) {
         contracts.init(isMainnet);
         this.ADDR_PREFIX = isMainnet ? 'addr' : 'addr_test';
-        this.scriptRefOwnerAddr = scriptRefOwnerAddr;
+        if (!scriptRefOwnerAddr) {
+            this.scriptRefOwnerAddr =
+                isMainnet ? 'addr1qys3nr0s5wqz3gw2n9satl279ntzha2z92v4ewrknr234hzx8ugllqwa07adyqwz23j797tha446p0exqa8jjypyqzasq73gym'
+                    : 'addr_test1vq73yuplt9c5zmgw4ve7qhu49yxllw7q97h4smwvfgst32qrkwupd';
+        } else {
+            this.scriptRefOwnerAddr = scriptRefOwnerAddr;
+        }
+
         this.allScriptRefUtxo = [];
     }
 
-    async init(ogmiosHost, ogmiosPort = 1337,tls = false) {
+    async init(ogmiosHost, ogmiosPort = 1337, tls = false) {
 
-        await ogmiosUtils.init_ogmios({ host: ogmiosHost, port: ogmiosPort ,tls:tls});
+        await ogmiosUtils.init_ogmios({ host: ogmiosHost, port: ogmiosPort, tls: tls });
         this.groupInfoHolderRef = await this.getScriptRefUtxo(contractsMgr.GroupInfoNFTHolderScript.script());
         this.adminNftHoldRefScript = await this.getScriptRefUtxo(contractsMgr.AdminNFTHolderScript.script());
         this.stakeScriptRefUtxo = await this.getScriptRefUtxo(contractsMgr.StoremanStackScript.script());
