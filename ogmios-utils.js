@@ -214,7 +214,7 @@ module.exports.init_ogmios = async function (hostServer = { host: '127.0.0.1', p
     const blockHeight = await query.blockHeight();
 
     // const ss = await this.getUtxo('addr_test1qz6twkzgss75sk379u0e27phvwhmtqqfuhl5gnx7rh7nux2xg4uwrhx9t58far8hp3a06hfdfzlsxgfrzqv5ryc78e4s4dwh26')
-    // console.log(ss);
+    // console.log(blockHeight);
     // // context.socket.close()
     // const fd = await query.eraStart();
     // const soltConfig = await query.eraSummaries();

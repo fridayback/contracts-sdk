@@ -6,7 +6,7 @@ const BigNumber = require('bignumber.js');
 const plutus = require('./plutus');
 
 const contractMgr = require('./contracts-mgr');
-
+let MAPPINGTOKEN_POLICY;
 // let groupInfoTokenPlutus;
 // let groupInfoTokenHolderPlutus;
 // let treasuryPlutus;
@@ -1089,7 +1089,9 @@ class MappingTokenScript {
     }
 
     static policy_id() {
-        return this.script().hash().to_hex();
+        // return this.script().hash().to_hex();
+        if(!MAPPINGTOKEN_POLICY) throw 'not initialized'
+        return MAPPINGTOKEN_POLICY;
     }
 
     static tokenId(tokenName) {
@@ -2160,6 +2162,14 @@ function init(network = true) {
     const treasuryCheckTokenPlutus = currentPlutus.treasuryCheckTokenPlutus;
     const mintCheckTokenPlutus = currentPlutus.mintCheckTokenPlutus;
 
+    if(treasuryScript) treasuryScript.free();
+    if(treasuryCheckScript) treasuryCheckScript.free();
+    if(mappingTokenScript) mappingTokenScript.free();
+    if(mintCheckScript) mintCheckScript.free();
+
+    if(treasuryCheckTokenScript) treasuryCheckTokenScript.free();
+    if(mintCheckTokenScript) mintCheckTokenScript.free();
+
     treasuryScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(treasuryPlutus.cborHex, 'hex'));
     treasuryCheckScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(treasuryCheckPlutus.cborHex, 'hex'));
     mappingTokenScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(mappingTokenPlutus.cborHex, 'hex'));
@@ -2172,6 +2182,9 @@ function init(network = true) {
     // console.log("treasuryCheckScript:",treasuryCheckScript.hash().to_hex());
     // console.log("mappingTokenScript:",mappingTokenScript.hash().to_hex());
     // console.log("mintCheckScript:",mintCheckScript.hash().to_hex());
+
+    MAPPINGTOKEN_POLICY = mappingTokenScript.hash().to_hex();
+    console.log(`MAPPINGTOKEN_POLICY = ${MAPPINGTOKEN_POLICY}`);
 }
 
 

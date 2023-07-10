@@ -2076,6 +2076,13 @@ function init(network = true) {
     const stakeCheckPlutus = currentPlutus.stakeCheckPlutus;
 
 
+    if(groupNFTScript) groupNFTScript.free();
+    if(groupNFTHolderScript) groupNFTHolderScript.free();
+    if(adminNFTScript) adminNFTScript.free();
+    if(adminNFTHolderScript) adminNFTHolderScript.free();
+    if(storemanStakeScript) storemanStakeScript.free();
+    if(stakeCheckScript) stakeCheckScript.free();
+
     groupNFTScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(groupInfoTokenPlutus.cborHex, 'hex'));
     groupNFTHolderScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(groupInfoTokenHolderPlutus.cborHex, 'hex'));
     adminNFTScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(adminNFTPlutus.cborHex, 'hex'));
