@@ -282,11 +282,11 @@ class ContractSdk {
     }
 
     async claim(amount, receiptor, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
-        return await this.invokeStoremanStake(ACTION_CLAIM, { cliamTo: receiptor, claimAmount: amount }, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
+        return await this.invokeStoremanStake(ACTION_CLAIM, { claimTo: receiptor, claimAmount: amount }, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
     }
 
     async deregister(mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
-        return await this.invokeStoremanStake(ACTION_DEREGISTER, { cliamTo: receiptor, claimAmount: amount }, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
+        return await this.invokeStoremanStake(ACTION_DEREGISTER, { claimTo: receiptor, claimAmount: amount }, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
     }
 
     async mintTreasuryCheckToken(amount, mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
