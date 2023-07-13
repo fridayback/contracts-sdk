@@ -1,9 +1,9 @@
 
-
 const {
     createInteractionContext,
     createStateQueryClient,
     createTxSubmissionClient, TxSubmission
+    , getServerHealth
 } = require('@cardano-ogmios/client');
 
 const utils = require('./utils');
@@ -19,16 +19,10 @@ module.exports.setWasm = function(wasm) {
 let context;
 let txSubmitclient;
 let query;
+let connectConfig;
+let timer;
 
-const errorHandler = async (error) => {
-    console.error(error);
-    await txSubmitclient.shutdown();
-}
 
-const closeHandler = async (code, reason) => {
-    // console.log('WS close: code =', code, 'reason =', reason);
-    // await client.shutdown();
-}
 //---------------------------------------------------------------------------------------------
 
 // const BlockFrostAPI = require('@blockfrost/blockfrost-js').BlockFrostAPI;
@@ -203,7 +197,7 @@ module.exports.signFn = (skey, hash) => {
     return { vkey, signature };
 }
 
-module.exports.init_ogmios = async function (hostServer = { host: '127.0.0.1', port: 1337, tls: false }) {
+module.exports.init_ogmios = async function (hostServer = { host: '127.0.0.1', port: 1337, tls: false }, tick = 10) {
     let host = '127.0.0.1';
     let port = 1337;
     let tls = false;
@@ -212,10 +206,24 @@ module.exports.init_ogmios = async function (hostServer = { host: '127.0.0.1', p
         if (hostServer.port) port = hostServer.port;
         if (hostServer.tls) tls = hostServer.tls;
     }
+    connectConfig = {host,port,tls};
     context = await createInteractionContext(errorHandler, closeHandler, { connection: { host, port, tls }, interactionType: 'LongRunning' });
     txSubmitclient = await createTxSubmissionClient(context);
     query = await createStateQueryClient(context);
-    const blockHeight = await query.blockHeight();
+    // const blockHeight = await query.blockHeight();
+
+    const heartBeat = async function(){
+        try {
+            console.log('heartbeat');
+            const blockHeight = await query.blockHeight();
+            timer = setTimeout(async ()=>{await heartBeat();},tick*1000);
+        } catch (error) {
+            
+        }
+    }
+    if(tick) {
+        await heartBeat();
+    }
 
     // const ss = await this.getUtxo('addr_test1qz6twkzgss75sk379u0e27phvwhmtqqfuhl5gnx7rh7nux2xg4uwrhx9t58far8hp3a06hfdfzlsxgfrzqv5ryc78e4s4dwh26')
     // console.log(blockHeight);
@@ -227,7 +235,30 @@ module.exports.init_ogmios = async function (hostServer = { host: '127.0.0.1', p
 
     // console.log('===>',this.soltToTimestamp(28180867,soltConfig,genisis));
 }
-//eb1905f4b011bc3412d65a1977668abbe4fa3538d3bd4e828076d64d
+
+const errorHandler = async (error) => {
+    console.error(error);
+    await txSubmitclient.shutdown();
+    await query.shutdown();
+}
+
+const closeHandler = async (code, reason) => {
+    console.log('WS close: code =', code, 'reason =', reason);
+    const reconnect = async function(connectConfig){
+        try {
+            await module.exports.init_ogmios(connectConfig);
+            console.log('re-connnect successfully');
+        } catch (error) {
+            console.log('re-connnect failed, retry after 5s:',error.message);
+            setTimeout(async ()=>{
+                await reconnect(connectConfig);
+            },5000);
+        }
+    }
+    await reconnect(connectConfig);
+
+}
+
 module.exports.getdelegationsAndRewards = async function (stakeKeyHash) {
     const infos = await query.delegationsAndRewards([stakeKeyHash]);
     return infos[stakeKeyHash];
@@ -304,7 +335,6 @@ module.exports.evaluate = async (signedTxRaw) => {
         }
     }
 }
-
 
 module.exports.fixTxExuintByEvaluate = async function (protocolParams, txRaw, collateralUtxos, gasMutipl = 1) {
     const exUnitEVA = await this.evaluate(txRaw);
