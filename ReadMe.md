@@ -52,6 +52,16 @@ sdk使用指南：
     changeAddr为utxoForFee的找零地址，
     signFn为发起者的签名回调函数。
 
+### async setAdmin(signatories, minNumSignatures, mustSignByAddrs, utxosForFee, utxoForCollateral, changeAddr, signFn = undefined, exUnitTx = undefined)  ---- AdminNFT@AdminNFTHolder: update
+    signatories 新的admin列表,
+    minNumSignatures 新的多签门限
+    mustSignByAddrs 为本交易必须要签名的地址列表，
+    utxoForFee为支付交易Fee的utxo,
+    utxoForCollateral为交易保证金,
+    changeAddr 为utxoForFee的找零地址，
+    signFn为发起者的签名回调函数。
+    exUnitTx为指定的各input对应的exUnit参数
+
 ### async delegate(pool, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn) ---- UTXO@StakeCheck: DelegateStake
     pool 此次delegate 的pool地址,
     mustSignBy为本交易必须要签名的地址列表，
