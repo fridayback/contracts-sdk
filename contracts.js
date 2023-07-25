@@ -2162,13 +2162,13 @@ function init(network = true) {
     const treasuryCheckTokenPlutus = currentPlutus.treasuryCheckTokenPlutus;
     const mintCheckTokenPlutus = currentPlutus.mintCheckTokenPlutus;
 
-    if(treasuryScript) treasuryScript.free();
-    if(treasuryCheckScript) treasuryCheckScript.free();
-    if(mappingTokenScript) mappingTokenScript.free();
-    if(mintCheckScript) mintCheckScript.free();
+    // if(treasuryScript) treasuryScript.free();
+    // if(treasuryCheckScript) treasuryCheckScript.free();
+    // if(mappingTokenScript) mappingTokenScript.free();
+    // if(mintCheckScript) mintCheckScript.free();
 
-    if(treasuryCheckTokenScript) treasuryCheckTokenScript.free();
-    if(mintCheckTokenScript) mintCheckTokenScript.free();
+    // if(treasuryCheckTokenScript) treasuryCheckTokenScript.free();
+    // if(mintCheckTokenScript) mintCheckTokenScript.free();
 
     treasuryScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(treasuryPlutus.cborHex, 'hex'));
     treasuryCheckScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(treasuryCheckPlutus.cborHex, 'hex'));
