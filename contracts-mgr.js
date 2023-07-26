@@ -416,12 +416,19 @@ class GroupInfoNFTHolderScript {
         return data;
     }
 
-    static async setVersion(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, adminInfo, newVersion, changeAddress, ttl, signFn, exUnitTx) {
+    static async setVersion(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, adminInfo, newVersion, newDatum, changeAddress, ttl, signFn, exUnitTx) {
 
-        let params = GroupNFT.groupInfoFromDatum(utxoToSpend.datum);
-        params[GroupNFT.Version] = newVersion;
+        let paramsOld = GroupNFT.groupInfoFromDatum(utxoToSpend.datum);
+        const param = GroupNFT.groupInfoFromDatum(newDatum.to_hex());
+        paramsOld[GroupNFT.Version] = newVersion;
+        for (const key in paramsOld) {
+            if (paramsOld[key] == param[key]) continue;
+            else {
+                throw 'bad new datum';
+            }
+        }
 
-        return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, params, changeAddress, ttl, signFn, GroupNFT.Version, adminInfo, exUnitTx, exUnitTx);
+        return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, newDatum, changeAddress, ttl, signFn, GroupNFT.Version, adminInfo, exUnitTx, exUnitTx);
     }
 
     // static async updateAdmin(protocolParams, utxosForFee, utxoForCollateral, utxosToSpend, scriptRef, adminInfo, newAdmin, changeAddress, ttl, signFn) {
@@ -441,14 +448,15 @@ class GroupInfoNFTHolderScript {
 
     }
 
-    // static async setBalanceWorker(protocolParams, utxosForFee, utxoForCollateral, utxosToSpend, scriptRef, adminInfo, newBalanceWorker, changeAddress, ttl, signFn) {
-    //     // const datum = CardanoWasm.PlutusData.from_hex(utxosToSpend[0].datum);
-    //     let params = GroupNFT.groupInfoFromDatum(utxosToSpend[0].datum);
-    //     params[GroupNFT.BalanceWorker] = newBalanceWorker;
+    static async setBalanceWorker(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, adminInfo, newBalanceWorkerPK, changeAddress, ttl, signFn, exUnitTx) {
+        // const datum = CardanoWasm.PlutusData.from_hex(utxosToSpend[0].datum);
+        let params = GroupNFT.groupInfoFromDatum(utxosToSpend[0].datum);
+        params[GroupNFT.BalanceWorker] = newBalanceWorkerPK;
 
-    //     return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxosToSpend, scriptRef, params, changeAddress, ttl, signFn, GroupNFT.BalanceWorker, adminInfo);
+        return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, params, changeAddress, ttl, signFn, GroupNFT.BalanceWorker, adminInfo, exUnitTx);
 
-    // }
+
+    }
 
     static async setTreasuryCheckVH(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, adminInfo, newTreasuryCheckVH, changeAddress, ttl, signFn, exUnitTx) {
         // const datum = CardanoWasm.PlutusData.from_hex(utxosToSpend[0].datum);
@@ -562,7 +570,16 @@ class GroupInfoNFTHolderScript {
 
 
 
-        const groupInfoDatum = GroupNFT.genGroupInfoDatum(groupInfoParams);
+        let groupInfoDatum;
+        let groupNFTHolderPKH;
+        if (action == GroupNFT.Version) {
+            groupInfoDatum = groupInfoParams;
+            const param = GroupNFT.groupInfoFromDatum(groupInfoParams.to_hex());
+            groupNFTHolderPKH = param[GroupNFT.Version];
+        } else {
+            groupInfoDatum = GroupNFT.genGroupInfoDatum(groupInfoParams);
+            groupNFTHolderPKH = groupInfoParams[GroupNFT.Version];
+        }
 
         let adminPKHForSign;
 
@@ -610,7 +627,7 @@ class GroupInfoNFTHolderScript {
         let outputAddress = GroupInfoNFTHolderScript.address();
         if (action == GroupNFT.Version) {
             outputAddress = CardanoWasm.EnterpriseAddress.new(Network_Id, CardanoWasm.StakeCredential.from_scripthash(
-                CardanoWasm.ScriptHash.from_hex(groupInfoParams[GroupNFT.Version]))).to_address();
+                CardanoWasm.ScriptHash.from_hex(groupNFTHolderPKH))).to_address();
         }
         const output = CardanoWasm.TransactionOutput.new(outputAddress, outputValue);
         output.set_plutus_data(groupInfoDatum);
@@ -973,14 +990,14 @@ class AdminNFTHolderScript {
         return CardanoWasm.Transaction.new(tx.body(), witnessSet);
     }
 
-    static async update(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, changeAddress, signatories, minNumSignatures, signFn, mustSignBy, groupInfoNFT, exUnitTx) {
+    static async update(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, changeAddress, signatories, minNumSignatures, signFn, mustSignBy, exUnitTx) {
         const signatoriesInfo = { signatories, minNumSignatures };
-        return await this.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, changeAddress, signatoriesInfo, this.Update, signFn, mustSignBy, groupInfoNFT, exUnitTx);
+        return await this.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, changeAddress, signatoriesInfo, this.Update, signFn, mustSignBy, exUnitTx);
     }
 
-    static async upgrade(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, changeAddress, owner, datum, signFn, mustSignBy, groupInfoNFT, exUnitTx) {
+    static async upgrade(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, changeAddress, owner, datum, signFn, mustSignBy, exUnitTx) {
         const signatoriesInfo = { owner, datum };
-        return await this.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, changeAddress, signatoriesInfo, this.Upgrade, signFn, mustSignBy, groupInfoNFT, exUnitTx);
+        return await this.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, changeAddress, signatoriesInfo, this.Upgrade, signFn, mustSignBy, exUnitTx);
     }
 
     static usingAdminNft(protocolParams, txBuilder, txInputBuilder, adminNftUtxo, adminNftHoldRefScript, mustSignBy, exUnitEVA) {
@@ -1637,9 +1654,9 @@ class StoremanStackScript {
             totalCollateralValue = totalCollateralValue.checked_add(value);
         }
 
-        // console.log('totalCollateralValue =', totalCollateralValue.to_json(), 'fee =', fee.to_str());
 
         const collateralFee = fee.checked_mul(CardanoWasm.BigNum.from_str('2'));
+        // console.log('totalCollateralValue =', totalCollateralValue.to_json(), 'fee =', fee.to_str(),collateralFee.to_json());
         const collateralChangeValue = totalCollateralValue.checked_sub(CardanoWasm.Value.new(collateralFee));
         const collaterChangeOutput = CardanoWasm.TransactionOutput.new(collaterOwnerAddress, collateralChangeValue);
 

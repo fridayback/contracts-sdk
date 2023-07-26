@@ -132,13 +132,23 @@ class ContractSdk {
                     , newStackCheckVk, changeAddr, undefined, signFn, exUnitTx);
                 break;
             }
-            // case contractsMgr.GroupNFT.Version: {
-            //     signedTx = await contractsMgr.GroupInfoNFTHolderScript.setVersion(
-            //         protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
-            //         , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
-            //         , setParam, changeAddr, undefined, signFn);TODO
-            //     break;
-            // }
+            case contractsMgr.GroupNFT.BalanceWorker: {
+                const newBalancePK = utils.addressToPkhOrScriptHash(setParam);
+                signedTx = await contractsMgr.GroupInfoNFTHolderScript.setBalanceWorker(
+                    protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
+                    , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
+                    , newBalancePK, changeAddr, undefined, signFn, exUnitTx);
+                break;
+            }
+            case contractsMgr.GroupNFT.Version: {
+                const newDatum = CardanoWasm.PlutusData.from_hex(setParam.datum);
+                const newOwner = utils.addressToPkhOrScriptHash(setParam.owner);
+                signedTx = await contractsMgr.GroupInfoNFTHolderScript.setVersion(
+                    protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
+                    , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
+                    , newOwner, newDatum, changeAddr, undefined, signFn, exUnitTx);
+                break;
+            }
             default:
                 throw `unkown action${action}`;
                 break;
@@ -183,10 +193,11 @@ class ContractSdk {
                     , adminNftHoldRefScript, changeAddr, signatories, setParam.minNumSignatures, signFn, mustSignBy, exUnitTx);
                 break;
             }
-            case contractsMgr.AdminNFTHolderScript.upgrade: {
+            case contractsMgr.AdminNFTHolderScript.Upgrade: {
+                const datum = CardanoWasm.PlutusData.from_hex(setParam.datum);
                 signedTx = await contractsMgr.AdminNFTHolderScript.upgrade(
                     protocolParamsGlobal, utxosForFee, utxoForCollateral, adminNftUtxo
-                    , adminNftHoldRefScript, changeAddr, setParam.owner, setParam.datum, signFn, mustSignBy, exUnitTx);
+                    , adminNftHoldRefScript, changeAddr, setParam.owner, datum, signFn, mustSignBy, exUnitTx);
                 break;
             }
             default:
@@ -199,6 +210,15 @@ class ContractSdk {
 
     async setAdmin(signatories, minNumSignatures, mustSignByAddrs, utxosForFee, utxoForCollateral, changeAddr, signFn = undefined, exUnitTx = undefined) {
         return await this.invokeAdminNftHolder(contractsMgr.AdminNFTHolderScript.Update, { signatories, minNumSignatures }
+            , mustSignByAddrs, utxosForFee, utxoForCollateral, changeAddr, signFn, exUnitTx);
+    }
+
+    async upgradeGroupNFTHolder(newHolder, newDatum, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.Version, { owner: newHolder, datum: newDatum }, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
+    }
+
+    async upgradeAdminNFTHolder(newHolder, newDatum, mustSignByAddrs, utxosForFee, utxoForCollateral, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        return await this.invokeAdminNftHolder(contractsMgr.AdminNFTHolderScript.Upgrade, { owner: newHolder, datum: newDatum }
             , mustSignByAddrs, utxosForFee, utxoForCollateral, changeAddr, signFn, exUnitTx);
     }
 
@@ -216,6 +236,10 @@ class ContractSdk {
 
     async setStakeCheckVH(newStackCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
         return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.StkCheckVh, newStackCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
+    }
+
+    async setBalanceWorker(newBalanceWorker, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.BalanceWorker, newBalanceWorker, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
     }
 
     async addSignature(tx, signFn = undefined) {

@@ -5,16 +5,17 @@ const contractsMgr = require('./contracts-mgr');
 const contracts = require('./contracts')
 const utils = require('./utils')
 
-// const host = '127.0.0.1';
+const host = '127.0.0.1';
 // const host = '52.13.9.234'//preview
-const host = '44.229.225.45';//preprod
+// const host = '44.229.225.45';//preprod
 
-// const collateralAmount = 123450000
-// const parameterizedAmount = 5678900;
-// const parameterizedAmount2 = 5600000;
-const collateralAmount = 5000000;
-const parameterizedAmount = 2222221;
-const parameterizedAmount2 = 2222222
+const collateralAmount = 123450000
+const parameterizedAmount = 5678900;
+const parameterizedAmount2 = 5600000;
+
+// const collateralAmount = 5000000;
+// const parameterizedAmount = 2222221;
+// const parameterizedAmount2 = 2222222
 
 const kkkk = '61b4743240b26bc7bf495aada16e3e1abb8d3147e2ad97e35cf01b36be1afe0b';//CardanoWasm.PrivateKey.generate_ed25519().to_hex();
 const newKey = CardanoWasm.PrivateKey.from_hex(kkkk);
@@ -25,20 +26,20 @@ const adminaddr = CardanoWasm.BaseAddress.new(
     , CardanoWasm.StakeCredential.from_keyhash(newPkh))
 
 
-const payPrvKeyNext = '9b160ba482e38697c5631df832cbc2f5a9c41d9a588b2fa11dc7c370cf02058a';
-const payPrvKey = kkkk;
-const scriptRefOwnerAddr = 'addr1qys3nr0s5wqz3gw2n9satl279ntzha2z92v4ewrknr234hzx8ugllqwa07adyqwz23j797tha446p0exqa8jjypyqzasq73gym';
-const admin = adminaddr.to_address().to_bech32('addr');
-const adminNext = 'addr_test1qpewhjzf3nsh8ytwtkqewf0n8kkynxsva867stedemugsa5a5fxd4tcsgemc7gc4sqfww6f6s0rc45kcsjkd2wzxt2dqnhh2wl';
-
-
 // const payPrvKeyNext = '9b160ba482e38697c5631df832cbc2f5a9c41d9a588b2fa11dc7c370cf02058a';
-// const payPrvKey = 'cbc623254ca1eb30d8cb21b2ef04381372ff24529a74e4b5117d1e3bbb0f0188';
-// const scriptRefOwnerAddr = 'addr_test1vq73yuplt9c5zmgw4ve7qhu49yxllw7q97h4smwvfgst32qrkwupd';
-// const admin = 'addr_test1qz6twkzgss75sk379u0e27phvwhmtqqfuhl5gnx7rh7nux2xg4uwrhx9t58far8hp3a06hfdfzlsxgfrzqv5ryc78e4s4dwh26';
+// const payPrvKey = kkkk;
+// const scriptRefOwnerAddr = 'addr1qys3nr0s5wqz3gw2n9satl279ntzha2z92v4ewrknr234hzx8ugllqwa07adyqwz23j797tha446p0exqa8jjypyqzasq73gym';
+// const admin = adminaddr.to_address().to_bech32('addr');
 // const adminNext = 'addr_test1qpewhjzf3nsh8ytwtkqewf0n8kkynxsva867stedemugsa5a5fxd4tcsgemc7gc4sqfww6f6s0rc45kcsjkd2wzxt2dqnhh2wl';
 
-const sdk = new ContractSdk(true);
+
+const payPrvKeyNext = '9b160ba482e38697c5631df832cbc2f5a9c41d9a588b2fa11dc7c370cf02058a';
+const payPrvKey = 'cbc623254ca1eb30d8cb21b2ef04381372ff24529a74e4b5117d1e3bbb0f0188';
+const scriptRefOwnerAddr = 'addr_test1vq73yuplt9c5zmgw4ve7qhu49yxllw7q97h4smwvfgst32qrkwupd';
+const admin = 'addr_test1qz6twkzgss75sk379u0e27phvwhmtqqfuhl5gnx7rh7nux2xg4uwrhx9t58far8hp3a06hfdfzlsxgfrzqv5ryc78e4s4dwh26';
+const adminNext = 'addr_test1qpewhjzf3nsh8ytwtkqewf0n8kkynxsva867stedemugsa5a5fxd4tcsgemc7gc4sqfww6f6s0rc45kcsjkd2wzxt2dqnhh2wl';
+
+const sdk = new ContractSdk(false);
 
 // const tmpaddr = CardanoWasm.Address.from_bech32('addr_test1qzqchffrha5hjcztwx0p48wtv0y36hw098rdw366fqlzuymun97wgelqtwe9aladfx2pukf4jdfqtjh7cnja50y247dsnalv6f');
 // const basetmp = CardanoWasm.BaseAddress.from_address(tmpaddr);
@@ -47,12 +48,31 @@ const sdk = new ContractSdk(true);
 
 const signatories = [
     admin,
-    'addr1q8jqrqz0t2vzy5yvl88wtyjgurvhwauw0sqpe698mq04p0ham3clyk6mg6gctwsfuc8hsgqdt0s9laxl585uwu3xvx2s2pglww'
+    adminNext,
+    'addr_test1qzqchffrha5hjcztwx0p48wtv0y36hw098rdw366fqlzuymun97wgelqtwe9aladfx2pukf4jdfqtjh7cnja50y247dsnalv6f',
+    'addr_test1qr2h8sc5v5wg4eg0ennegxvpqrtdxnhxldgaysakvmh5tx4yqse03kx9yltqx3w4sgvrc23n75wuj4vtglj0aafecaqszc0l33',
+    'addr_test1qr763w3kp7yfl3xdz2vk405jc7v7rya67yga3zp7vzkr47c0g5fgz07n45z3eqnu9f465lhmlan65aju6ukml8tc0hvssnqf4g',
+    'addr_test1qpkq2gjlphgx0d8uq72rs47mkkuyrslzqvvvklk273q4nr7uwx4038letqarp479q7wykxl9lygkmrkrq84sazslw8ts32d299',
+    'addr_test1qpstydtgjfyavqecas5w730m86tltgl3ask2xsl3hfl2vw9ng88pgc8c4mh3tx0mpm2es8e54w86rvat6de0nmgec5ast965pg',
+    'addr_test1qp884fateqg23tt8q2j7xjvk6kqu3wczfdck58egs8tyzvvnp2atxdggqzknchlkmxnnu0wgy9pc4ugyax3u0vsv5fuq5v6kp8',
+    'addr_test1qqesh9yrdf4ghwm5p8muwuapvgwxxk4ywa9mzgke2vg9mv5zgtcshah4maetd86h08jjednyrermpej7rf0jd240tnlqx6g0kv'
 ]
 
 const mustSignBy = [
-    admin//, adminNext
+    admin, adminNext
 ];
+
+let input = {
+    "function": "updateGroupNFT",
+    "paras": {
+        "update": {
+            "newOracleWorker": "addr_test1vq73yuplt9c5zmgw4ve7qhu49yxllw7q97h4smwvfgst32qrkwupd"
+        },
+        "signers": [""]
+    },
+    "tx": "",
+    "witnessSet": ""
+};
 
 const signFn = async hash => {
     return ogmiosUtils.signFn(payPrvKey, hash);
@@ -319,11 +339,15 @@ const newMintCheckVH = 'addr_test1xpmqvkf78d98ngyzv578gw4de9wjquuhh97087l87sna0f
 
 // const newTreasyCheckVH = 'addr_test1xqs45y5mw56t032lv8qgt9sp9xhwvfw49m6sus4xrhnrpwjwsw5k2ttkze7e9zd3jr00x5nkhmpx97cv6xx25jsgxh2sh4zls7';
 // const newMintCheckVH = 'addr_test1xq3mlgvywct2zzyhv5ttmsf6c7quymvnxnx0nk3wz629wp2wsw5k2ttkze7e9zd3jr00x5nkhmpx97cv6xx25jsgxh2swesly4';
-
+const cbor = require('cbor-sync');
 async function main() {
     // const sdk = new ContractSdk(false);
     await sdk.init(host, 1337);
     show();
+
+    // const cborHex = '84a90082825820bf0ce897ccd74318d6e7efb6ecbaaad9320b0c59bae52738d36082922e51282e01825820c7ee81fff531b71df2c20fe0b511cb2fe2f66817bda8877df108d9dc46a20482010182a300581d712cbf787c0586588393ee0a284760c25db4f139557e113d897af4322601821a0013126ca1581c53cc8f42ca118ffa3fe0f66cf82d973b73913e0ff25edb2e5e1371afa14c41646d696e4e4654436f696e01028201d8185825d8799f9f581ce401804f5a9822508cf9cee59248e0d977778e7c001ce8a7d81f50beff01ff82583901e401804f5a9822508cf9cee59248e0d977778e7c001ce8a7d81f50befddc71f25b5b469185ba09e60f78200d5be05ff4dfa1e9c7722661951b00000001c1685126021a000ca7cf0b5820c7751fab0e918176c2ab9873c609e98dd659f97c22c056be35e566836ba5d0440d818258208f7c78d1e03e4e443486ad338b6f7e2bc500c9779c2490c9ddcddb5018cd7925000e81581ce401804f5a9822508cf9cee59248e0d977778e7c001ce8a7d81f50be1082583901e401804f5a9822508cf9cee59248e0d977778e7c001ce8a7d81f50befddc71f25b5b469185ba09e60f78200d5be05ff4dfa1e9c7722661951a00332c1a111a00191f261282825820be8d471f5ec6aef8d9e1f18afceed18e314361db7998d55bbe1543f3fe00ac3000825820c7ee81fff531b71df2c20fe0b511cb2fe2f66817bda8877df108d9dc46a2048201a0f5f6';
+    // const ss = CardanoWasm.Transaction.from_hex(cborHex)
+    // console.log(ss.to_json());
 
     // for (let i = 0; i < 10000; i++) {
     //     await ogmiosUtils.getParamProtocol();
@@ -343,29 +367,65 @@ async function main() {
 
     // const treasuryCheckRef = await tryScriptRefUtxo(contracts.TreasuryCheckScript.script());
     // const mintCheckRef = await tryScriptRefUtxo(contracts.MintCheckScript.script());
+
     {
-        // const utxosForFee = await getUtxoForFee();
-        // let adminInfo = await getAdminInfo();
-        // console.log('before setAdmin:', JSON.stringify(adminInfo));
-        // let signedTx = await sdk.setTreasuryCheckVH(newTreasyCheckVH, mustSignBy, utxosForFee, [collateralUtxo], admin);
-        // console.log('--%%%%%%%%%%%%%1-------\n', signedTx.to_json());
-        // const exUnit = await finalTxEvaluate(signedTx);
-        // signedTx = await sdk.setTreasuryCheckVH(newTreasyCheckVH, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
-        // console.log('--%%%%%%%%%%%%%2-------\n', signedTx.to_json());
+        const utxosForFee = await getUtxoForFee();
+        let groupInfo = await getGroupInfo();
+        console.log('before upgrade groupNFTHolder:', JSON.stringify(groupInfo));
+        const newHolder = contractsMgr.GroupInfoNFTHolderScript.address().to_bech32(sdk.ADDR_PREFIX);
+        const groupInfoUtxo = await sdk.getGroupInfoNft();
+        const newDatum = groupInfoUtxo.datum;
+        let signedTx = await sdk.upgradeGroupNFTHolder(newHolder, newDatum, mustSignBy, utxosForFee, [collateralUtxo], admin);
+        console.log('--%%%%%%%%%%%%%1-------\n', signedTx.to_json());
+        const exUnit = await finalTxEvaluate(signedTx);
+        signedTx = await sdk.upgradeGroupNFTHolder(newHolder, newDatum, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
+        console.log('--%%%%%%%%%%%%%2-------\n', signedTx.to_json());
+        // let o = await submitAndWaitConfirmed(signedTx);
+        // groupInfo = await getGroupInfo();
+        // console.log('after setAdmin:', JSON.stringify(groupInfo));
+    }
+
+    {
+        const utxosForFee = await getUtxoForFee();
+        let adminInfo = await getAdminInfo();
+        console.log('before setAdmin:', JSON.stringify(adminInfo));
+        // const newHolder = contractsMgr.AdminNFTHolderScript.address().to_bech32(sdk.ADDR_PREFIX);
+        const newHolder = contractsMgr.GroupInfoNFTHolderScript.address().to_bech32(sdk.ADDR_PREFIX);
+        const adminInfoUtxo = await sdk.getAdminNft();
+        const newDatum = adminInfoUtxo.datum;
+        let signedTx = await sdk.upgradeAdminNFTHolder(newHolder, newDatum, mustSignBy, utxosForFee, [collateralUtxo], admin);
+        console.log('--%%%%%%%%%%%%%1-------\n', signedTx.to_json());
+        const exUnit = await finalTxEvaluate(signedTx);
+        signedTx = await sdk.upgradeAdminNFTHolder(newHolder, newDatum, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
+        console.log('--%%%%%%%%%%%%%2-------\n', signedTx.to_json());
         // let o = await submitAndWaitConfirmed(signedTx);
         // adminInfo = await getAdminInfo();
         // console.log('after setAdmin:', JSON.stringify(adminInfo));
     }
 
     {
-        // const utxosForFee = await getUtxoForFee();
-        // let adminInfo = await getAdminInfo();
-        // console.log('before setAdmin:', JSON.stringify(adminInfo));
-        // let signedTx = await sdk.setMintCheckVH(newMintCheckVH, mustSignBy, utxosForFee, [collateralUtxo], admin);
-        // console.log('--%%%%%%%%%%%%%1-------\n', signedTx.to_json());
-        // const exUnit = await finalTxEvaluate(signedTx);
-        // signedTx = await sdk.setMintCheckVH(newMintCheckVH, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
-        // console.log('--%%%%%%%%%%%%%2-------\n', signedTx.to_json());
+        const utxosForFee = await getUtxoForFee();
+        let adminInfo = await getAdminInfo();
+        console.log('before setAdmin:', JSON.stringify(adminInfo));
+        let signedTx = await sdk.setTreasuryCheckVH(newTreasyCheckVH, mustSignBy, utxosForFee, [collateralUtxo], admin);
+        console.log('--%%%%%%%%%%%%%1-------\n', signedTx.to_json());
+        const exUnit = await finalTxEvaluate(signedTx);
+        signedTx = await sdk.setTreasuryCheckVH(newTreasyCheckVH, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
+        console.log('--%%%%%%%%%%%%%2-------\n', signedTx.to_json());
+        // let o = await submitAndWaitConfirmed(signedTx);
+        // adminInfo = await getAdminInfo();
+        // console.log('after setAdmin:', JSON.stringify(adminInfo));
+    }
+
+    {
+        const utxosForFee = await getUtxoForFee();
+        let adminInfo = await getAdminInfo();
+        console.log('before setAdmin:', JSON.stringify(adminInfo));
+        let signedTx = await sdk.setMintCheckVH(newMintCheckVH, mustSignBy, utxosForFee, [collateralUtxo], admin);
+        console.log('--%%%%%%%%%%%%%1-------\n', signedTx.to_json());
+        const exUnit = await finalTxEvaluate(signedTx);
+        signedTx = await sdk.setMintCheckVH(newMintCheckVH, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
+        console.log('--%%%%%%%%%%%%%2-------\n', signedTx.to_json());
         // let o = await submitAndWaitConfirmed(signedTx);
         // adminInfo = await getAdminInfo();
         // console.log('after setAdmin:', JSON.stringify(adminInfo));
@@ -376,96 +436,96 @@ async function main() {
         const utxosForFee = await getUtxoForFee();
         let adminInfo = await getAdminInfo();
         console.log('before setAdmin:', JSON.stringify(adminInfo));
-        let signedTx = await sdk.setAdmin(signatories, 1, mustSignBy, utxosForFee, [collateralUtxo], admin);
+        let signedTx = await sdk.setAdmin(signatories, 2, mustSignBy, utxosForFee, [collateralUtxo], admin);
         console.log('--%%%%%%%%%%%%%1-------\n', signedTx.to_json());
         const exUnit = await finalTxEvaluate(signedTx);
-        signedTx = await sdk.setAdmin(signatories, 1, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
+        signedTx = await sdk.setAdmin(signatories, 2, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
         console.log('--%%%%%%%%%%%%%2-------\n', signedTx.to_json());
-        let o = await submitAndWaitConfirmed(signedTx);
-        adminInfo = await getAdminInfo();
-        console.log('after setAdmin:', JSON.stringify(adminInfo));
+        // let o = await submitAndWaitConfirmed(signedTx);
+        // adminInfo = await getAdminInfo();
+        // console.log('after setAdmin:', JSON.stringify(adminInfo));
     }
 
     {
-        // const utxosForFee = await getUtxoForFee();
-        // let groupInfo = await getGroupInfo();
-        // console.log('before setOracleWorker:', JSON.stringify(showGroupInfo(groupInfo)));
-        // let signedTx = await sdk.setOracleWorker(admin, mustSignBy, utxosForFee, [collateralUtxo], admin);
-        // const exUnit = await finalTxEvaluate(signedTx);
-        // signedTx = await sdk.setOracleWorker(admin, mustSignBy, utxosForFee, [collateralUtxo], admin,signFn,exUnit);
+        const utxosForFee = await getUtxoForFee();
+        let groupInfo = await getGroupInfo();
+        console.log('before setOracleWorker:', JSON.stringify(showGroupInfo(groupInfo)));
+        let signedTx = await sdk.setOracleWorker(admin, mustSignBy, utxosForFee, [collateralUtxo], admin);
+        const exUnit = await finalTxEvaluate(signedTx);
+        signedTx = await sdk.setOracleWorker(admin, mustSignBy, utxosForFee, [collateralUtxo], admin,signFn,exUnit);
         // let o = await submitAndWaitConfirmed(signedTx);
         // groupInfo = await getGroupInfo();
         // console.log('after setOracleWorker:', JSON.stringify(showGroupInfo(groupInfo)));
     }
 
     {
-        // let os = await getCheckTokenUtxo(0);
-        // console.log('amount before burn:', os.length);
-        // const utxpSpend = os.slice(0, 1);
-        // const utxosForFee = await getUtxoForFee();
-        // let signedTx = await sdk.burnTreasuryCheckToken(mustSignBy, utxosForFee, [collateralUtxo], utxpSpend, admin);
-        // const exUnit = await finalTxEvaluate(signedTx);
-        // signedTx = await sdk.burnTreasuryCheckToken(mustSignBy, utxosForFee, [collateralUtxo], utxpSpend, admin, signFn, exUnit);
+        let os = await getCheckTokenUtxo(0);
+        console.log('amount before burn:', os.length);
+        const utxpSpend = os.slice(0, 1);
+        const utxosForFee = await getUtxoForFee();
+        let signedTx = await sdk.burnTreasuryCheckToken(mustSignBy, utxosForFee, [collateralUtxo], utxpSpend, admin);
+        const exUnit = await finalTxEvaluate(signedTx);
+        signedTx = await sdk.burnTreasuryCheckToken(mustSignBy, utxosForFee, [collateralUtxo], utxpSpend, admin, signFn, exUnit);
         // const o = await submitAndWaitConfirmed(signedTx);
         // console.log('after before burn:', (await getCheckTokenUtxo(0)).length);
     }
 
     {
-        // let os = await getCheckTokenUtxo(1);
-        // console.log('amount before burn:', os.length);
-        // const utxpSpend = os.slice(3, 4);
-        // const utxosForFee = await getUtxoForFee();
-        // let signedTx = await sdk.burnMintCheckToken(mustSignBy, utxosForFee, [collateralUtxo], utxpSpend, admin);
-        // const exUnit = await finalTxEvaluate(signedTx);
-        // signedTx = await sdk.burnMintCheckToken(mustSignBy, utxosForFee, [collateralUtxo], utxpSpend, admin, signFn, exUnit);
+        let os = await getCheckTokenUtxo(1);
+        console.log('amount before burn:', os.length);
+        const utxpSpend = os.slice(3, 4);
+        const utxosForFee = await getUtxoForFee();
+        let signedTx = await sdk.burnMintCheckToken(mustSignBy, utxosForFee, [collateralUtxo], utxpSpend, admin);
+        const exUnit = await finalTxEvaluate(signedTx);
+        signedTx = await sdk.burnMintCheckToken(mustSignBy, utxosForFee, [collateralUtxo], utxpSpend, admin, signFn, exUnit);
         // const o = await submitAndWaitConfirmed(signedTx);
         // console.log('after before burn:', (await getCheckTokenUtxo(1)).length);
     }
 
-    // {
-    //     const utxosForFee = await getUtxoForFee();
-    //     const receiptor = 'addr_test1qp884fateqg23tt8q2j7xjvk6kqu3wczfdck58egs8tyzvvnp2atxdggqzknchlkmxnnu0wgy9pc4ugyax3u0vsv5fuq5v6kp8';
-    //     let signedTx = await sdk.claim(5405304, receiptor, mustSignBy,utxosForFee,collateralUtxo,admin);
-    //     const exUnit = await finalTxEvaluate(signedTx);
-    //     signedTx = await sdk.claim(85405304, receiptor, mustSignBy,utxosForFee,collateralUtxo,admin,signFn,exUnit);
-    //     const o = await submitAndWaitConfirmed(signedTx);
-    // }
     {
-        // const utxosForFee = await getUtxoForFee();
-        // const newTreasuryCheck = 'addr_test1xqs45y5mw56t032lv8qgt9sp9xhwvfw49m6sus4xrhnrpwjwsw5k2ttkze7e9zd3jr00x5nkhmpx97cv6xx25jsgxh2sh4zls7';
-        // let signedTx = await sdk.setTreasuryCheckVH(newTreasuryCheck, mustSignBy, utxosForFee, [collateralUtxo], admin);
-        // const exUnit = await finalTxEvaluate(signedTx);
-        // signedTx = await await sdk.setTreasuryCheckVH(newTreasuryCheck, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
+        const utxosForFee = await getUtxoForFee();
+        const receiptor = 'addr_test1qp884fateqg23tt8q2j7xjvk6kqu3wczfdck58egs8tyzvvnp2atxdggqzknchlkmxnnu0wgy9pc4ugyax3u0vsv5fuq5v6kp8';
+        let signedTx = await sdk.claim(5405304, receiptor, mustSignBy,utxosForFee,[collateralUtxo],admin);
+        const exUnit = await finalTxEvaluate(signedTx);
+        signedTx = await sdk.claim(85405304, receiptor, mustSignBy,utxosForFee,[collateralUtxo],admin,signFn,exUnit);
+        // const o = await submitAndWaitConfirmed(signedTx);
+    }
+    {
+        const utxosForFee = await getUtxoForFee();
+        const newTreasuryCheck = 'addr_test1xqs45y5mw56t032lv8qgt9sp9xhwvfw49m6sus4xrhnrpwjwsw5k2ttkze7e9zd3jr00x5nkhmpx97cv6xx25jsgxh2sh4zls7';
+        let signedTx = await sdk.setTreasuryCheckVH(newTreasuryCheck, mustSignBy, utxosForFee, [collateralUtxo], admin);
+        const exUnit = await finalTxEvaluate(signedTx);
+        signedTx = await await sdk.setTreasuryCheckVH(newTreasuryCheck, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
         // const o = await submitAndWaitConfirmed(signedTx);
     }
 
     {
-        // const utxosForFee = await getUtxoForFee();
-        // const newMintCheck = 'addr_test1xq3mlgvywct2zzyhv5ttmsf6c7quymvnxnx0nk3wz629wp2wsw5k2ttkze7e9zd3jr00x5nkhmpx97cv6xx25jsgxh2swesly4';
-        // let signedTx = await sdk.setMintCheckVH(newMintCheck, mustSignBy, utxosForFee, [collateralUtxo], admin);
-        // const exUnit = await finalTxEvaluate(signedTx);
-        // signedTx = await await sdk.setMintCheckVH(newMintCheck, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
+        const utxosForFee = await getUtxoForFee();
+        const newMintCheck = 'addr_test1xq3mlgvywct2zzyhv5ttmsf6c7quymvnxnx0nk3wz629wp2wsw5k2ttkze7e9zd3jr00x5nkhmpx97cv6xx25jsgxh2swesly4';
+        let signedTx = await sdk.setMintCheckVH(newMintCheck, mustSignBy, utxosForFee, [collateralUtxo], admin);
+        const exUnit = await finalTxEvaluate(signedTx);
+        signedTx = await await sdk.setMintCheckVH(newMintCheck, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
         // const o = await submitAndWaitConfirmed(signedTx);
     }
 
     {
-        // const count = 3;
-        // console.log('amount before mint:', (await getCheckTokenUtxo(0)).length);
-        // const utxosForFee = await getUtxoForFee();
-        // let signedTx = await sdk.mintTreasuryCheckToken(count, mustSignBy, utxosForFee, [collateralUtxo], admin);
-        // const exUnit = await finalTxEvaluate(signedTx);
-        // console.log('--exUnit---\n', JSON.stringify(exUnit));
-        // signedTx = await sdk.mintTreasuryCheckToken(count, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
+        const count = 3;
+        console.log('amount before mint:', (await getCheckTokenUtxo(0)).length);
+        const utxosForFee = await getUtxoForFee();
+        let signedTx = await sdk.mintTreasuryCheckToken(count, mustSignBy, utxosForFee, [collateralUtxo], admin);
+        const exUnit = await finalTxEvaluate(signedTx);
+        console.log('--exUnit---\n', JSON.stringify(exUnit));
+        signedTx = await sdk.mintTreasuryCheckToken(count, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
         // const o = await submitAndWaitConfirmed(signedTx);
         // console.log('amount after mint:', (await getCheckTokenUtxo(0)).length);
     }
 
     {
-        // console.log('amount before mint:', (await getCheckTokenUtxo(1)).length);
-        // const utxosForFee = await getUtxoForFee();
-        // let signedTx = await sdk.mintMintCheckToken(7, mustSignBy, utxosForFee, [collateralUtxo], admin);
-        // const exUnit = await finalTxEvaluate(signedTx);
-        // signedTx = await sdk.mintMintCheckToken(7, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
+        console.log('amount before mint:', (await getCheckTokenUtxo(1)).length);
+        const utxosForFee = await getUtxoForFee();
+        let signedTx = await sdk.mintMintCheckToken(7, mustSignBy, utxosForFee, [collateralUtxo], admin);
+        const exUnit = await finalTxEvaluate(signedTx);
+        signedTx = await sdk.mintMintCheckToken(7, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
         // const o = await submitAndWaitConfirmed(signedTx);
         // console.log('amount before mint:', (await getCheckTokenUtxo(1)).length);
     }
@@ -479,5 +539,5 @@ main().then(() => {
     console.error(e);
     // console.log(e[0].message);
 }).finally(() => {
-    ogmiosUtils.unInit();
+    // ogmiosUtils.unInit();
 })
