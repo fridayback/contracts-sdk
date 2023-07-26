@@ -44,8 +44,35 @@ sdk使用指南：
     changeAddr为utxoForFee的找零地址，
     signFn为发起者的签名回调函数。
 
-### async setStakeCheckVH(newStackCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn) ----  GroupNFT@GroupNFTHolder：update
+### async setStakeCheckVH(newStackCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn) ----  GroupNFT@GroupNFTHolder：update----  GroupNFT@GroupNFTHolder: update
     newStackCheckVH 为要设置的新的 StackCheck scriptHash,
+    mustSignBy为本交易必须要签名的地址列表，
+    utxoForFee为支付交易Fee的utxo,
+    utxoForCollaterals为交易保证金,
+    changeAddr为utxoForFee的找零地址，
+    signFn为发起者的签名回调函数。
+
+### async setBalanceWorker(newBalanceWorker, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined)----  GroupNFT@GroupNFTHolder: update
+    newBalanceWorker 为要设置的新的 基金会地址,
+    mustSignBy为本交易必须要签名的地址列表，
+    utxoForFee为支付交易Fee的utxo,
+    utxoForCollaterals为交易保证金,
+    changeAddr为utxoForFee的找零地址，
+    signFn为发起者的签名回调函数。
+
+### async upgradeGroupNFTHolder(newHolder, newDatum, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined)----  GroupNFT@GroupNFTHolder: upgrade
+    newHolder 为要设置的新的 groupNFTHolder,
+    newDatum 升级后绑定的datum,(hex)
+    mustSignBy为本交易必须要签名的地址列表，
+    utxoForFee为支付交易Fee的utxo,
+    utxoForCollaterals为交易保证金,
+    changeAddr为utxoForFee的找零地址，
+    signFn为发起者的签名回调函数。
+
+
+### async upgradeAdminNFTHolder(newHolder, newDatum, mustSignByAddrs, utxosForFee, utxoForCollateral, changeAddr, signFn = undefined, exUnitTx = undefined)---- AdminNFT@AdminNFTHolder: upgrade
+    newHolder 为要设置的新的 adminNFTHolder,
+    newDatum 升级后绑定的datum,(hex)
     mustSignBy为本交易必须要签名的地址列表，
     utxoForFee为支付交易Fee的utxo,
     utxoForCollaterals为交易保证金,
