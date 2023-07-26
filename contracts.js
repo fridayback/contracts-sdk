@@ -2184,7 +2184,7 @@ function init(network = true) {
     // console.log("mintCheckScript:",mintCheckScript.hash().to_hex());
 
     MAPPINGTOKEN_POLICY = mappingTokenScript.hash().to_hex();
-    console.log(`MAPPINGTOKEN_POLICY = ${MAPPINGTOKEN_POLICY}`);
+    // console.log(`MAPPINGTOKEN_POLICY = ${MAPPINGTOKEN_POLICY}`);
 }
 
 

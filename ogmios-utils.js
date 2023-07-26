@@ -194,7 +194,7 @@ module.exports.signFn = (skey, hash) => {
     return { vkey, signature };
 }
 
-module.exports.init_ogmios = async function (hostServer = { host: '127.0.0.1', port: 1337, tls: false }, tick = 10) {
+module.exports.init_ogmios = async function (hostServer = { host: '127.0.0.1', port: 1337, tls: false }, tick = 5) {
     let host = '127.0.0.1';
     let port = 1337;
     let tls = false;
