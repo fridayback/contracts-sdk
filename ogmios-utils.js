@@ -233,25 +233,28 @@ module.exports.init_ogmios = async function (hostServer = { host: '127.0.0.1', p
     // console.log('===>',this.soltToTimestamp(28180867,soltConfig,genisis));
 }
 
+
+const reconnect = async function(connectConfig){
+    try {
+        await module.exports.init_ogmios(connectConfig);
+        console.log('re-connnect successfully');
+    } catch (error) {
+        console.log('re-connnect failed, retry after 5s:',error.message);
+        setTimeout(async ()=>{
+            await reconnect(connectConfig);
+        },5000);
+    }
+}
+
 const errorHandler = async (error) => {
     console.error(error);
     await txSubmitclient.shutdown();
     await query.shutdown();
+    await reconnect(connectConfig);
 }
 
 const closeHandler = async (code, reason) => {
     console.log('WS close: code =', code, 'reason =', reason);
-    const reconnect = async function(connectConfig){
-        try {
-            await module.exports.init_ogmios(connectConfig);
-            console.log('re-connnect successfully');
-        } catch (error) {
-            console.log('re-connnect failed, retry after 5s:',error.message);
-            setTimeout(async ()=>{
-                await reconnect(connectConfig);
-            },5000);
-        }
-    }
     await reconnect(connectConfig);
 
 }
