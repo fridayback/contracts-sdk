@@ -119,10 +119,27 @@ sdk使用指南：
     changeAddr为utxoForFee的找零地址，
     signFn为发起者的签名回调函数。
 
+### async burnTreasuryCheckToken(amount,mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined)--- CheckToken/TreasuryCheck@TreasuryCheck：Burn
+    amount burn的TreasuryCheckToken数量,
+    mustSignByAddrs 为本交易必须要签名的地址列表，
+    utxosForFee 为支付交易Fee的utxo,
+    utxoForCollaterals 为交易保证金,
+    changeAddr 为utxoForFee的找零地址，
+    signFn 为发起者的签名回调函数。
+
+
 ### mintMintCheckToken(amount, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn) --- CheckToken/MintCheck@MintCheck：Mint
     amount mint的MintCheckToken数量,
     mustSignBy为本交易必须要签名的地址列表，
     utxoForFee为支付交易Fee的utxo,
     utxoForCollaterals为交易保证金,
+    changeAddr为utxoForFee的找零地址，
+    signFn为发起者的签名回调函数。
+
+### async burnMintCheckToken(amount, mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined)--- CheckToken/MintCheck@MintCheck：Burn
+    amount burn的MintCheckToken数量,
+    mustSignByAddrs 为本交易必须要签名的地址列表，
+    utxosForFee 为支付交易Fee的utxo,
+    utxoForCollaterals 为交易保证金,
     changeAddr为utxoForFee的找零地址，
     signFn为发起者的签名回调函数。
