@@ -365,11 +365,18 @@ class ContractSdk {
         return signedTx;
     }
 
-    async burnTreasuryCheckToken(mustSignByAddrs, utxosForFee, utxoForCollaterals, burnUtxos, changeAddr, signFn = undefined, exUnitTx = undefined) {
+    async burnTreasuryCheckToken(amount,mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
         const groupInfoUtxo = await this.getGroupInfoNft();
-        // const groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(groupInfoUtxo.datum);
+        const groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(groupInfoUtxo.datum);
         const adminNftUtxo = await this.getAdminNft();
         const protocolParamsGlobal = await ogmiosUtils.getParamProtocol();
+
+        const trearyCheckAddr = contracts.TreasuryCheckScript.address(groupInfoParams[contractsMgr.GroupNFT.StkVh]).to_bech32(this.ADDR_PREFIX);
+        let burnUtxos = await ogmiosUtils.getUtxo(trearyCheckAddr);
+        if(amount > burnUtxos.length){
+            throw `too many utxos to be burnd: max TreasuryCheck utxos is ${burnUtxos.length}`
+        }
+        burnUtxos = burnUtxos.slice(0,amount);
 
         let mustSignBy = [];
         for (let i = 0; i < mustSignByAddrs.length; i++) {
@@ -389,11 +396,18 @@ class ContractSdk {
         return signedTx;
     }
 
-    async burnMintCheckToken(mustSignByAddrs, utxosForFee, utxoForCollaterals, burnUtxos, changeAddr, signFn = undefined, exUnitTx = undefined) {
+    async burnMintCheckToken(amount, mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
         const groupInfoUtxo = await this.getGroupInfoNft();
-        // const groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(groupInfoUtxo.datum);
+        const groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(groupInfoUtxo.datum);
         const adminNftUtxo = await this.getAdminNft();
         const protocolParamsGlobal = await ogmiosUtils.getParamProtocol();
+
+        const trearyCheckAddr = contracts.MintCheckScript.address(groupInfoParams[contractsMgr.GroupNFT.StkVh]).to_bech32(this.ADDR_PREFIX);
+        let burnUtxos = await ogmiosUtils.getUtxo(trearyCheckAddr);
+        if(amount > burnUtxos.length){
+            throw `too many utxos to be burnd: max MintCheck utxos is ${burnUtxos.length}`
+        }
+        burnUtxos = burnUtxos.slice(0,amount);
 
         let mustSignBy = [];
         for (let i = 0; i < mustSignByAddrs.length; i++) {
