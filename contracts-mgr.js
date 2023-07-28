@@ -450,7 +450,7 @@ class GroupInfoNFTHolderScript {
 
     static async setBalanceWorker(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, adminInfo, newBalanceWorkerPK, changeAddress, ttl, signFn, exUnitTx) {
         // const datum = CardanoWasm.PlutusData.from_hex(utxosToSpend[0].datum);
-        let params = GroupNFT.groupInfoFromDatum(utxosToSpend[0].datum);
+        let params = GroupNFT.groupInfoFromDatum(utxoToSpend.datum);
         params[GroupNFT.BalanceWorker] = newBalanceWorkerPK;
 
         return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, params, changeAddress, ttl, signFn, GroupNFT.BalanceWorker, adminInfo, exUnitTx);
