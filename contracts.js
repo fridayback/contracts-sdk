@@ -164,7 +164,7 @@ class TreasuryCheckScript {
             //     , CardanoWasm.DatumSource.new_ref_input(input)
             //     , redeemer);
             const witness = CardanoWasm.PlutusWitness.new_with_ref_without_datum(
-                CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(CardanoWasm.ScriptHash.from_hex(scriptHash),scriptRefInput,CardanoWasm.Language.new_plutus_v2())
+                CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(CardanoWasm.ScriptHash.from_hex(scriptHash), scriptRefInput, CardanoWasm.Language.new_plutus_v2())
                 , redeemer
             )
 
@@ -436,9 +436,9 @@ class TreasuryScript {
         )
     }
 
-    static async transferFromTreasury(protocolParams, utxosForFee, utxosToSpend, scriptRefUtxo, groupNFTUtxo, funValueMap, toAddr, redeemProof, utxoForCollateral, treasuryCheckUxto, treasuryCheckRef, changeAddress, evaluateTxFn, signFn, rawMetaData, ttl) {
+    static async transferFromTreasury(protocolParams, utxosForFee, utxosToSpend, scriptRefUtxo, groupNFTUtxo, foundationAddr, toAddr, redeemProof, utxoForCollateral, treasuryCheckUxto, treasuryCheckRef, changeAddress, evaluateTxFn, signFn, rawMetaData, ttl) {
 
-        const signedTx = await TreasuryScript.transferFromTreasuryWithoutEvaluate(protocolParams, utxosForFee, utxosToSpend, scriptRefUtxo, groupNFTUtxo, funValueMap, toAddr, redeemProof, utxoForCollateral, treasuryCheckUxto, treasuryCheckRef, changeAddress, signFn, rawMetaData, ttl);
+        const signedTx = await TreasuryScript.transferFromTreasuryWithoutEvaluate(protocolParams, utxosForFee, utxosToSpend, scriptRefUtxo, groupNFTUtxo, foundationAddr, toAddr, redeemProof, utxoForCollateral, treasuryCheckUxto, treasuryCheckRef, changeAddress, signFn, rawMetaData, ttl);
         // return signedTx;
         const exUnitEVA = await evaluateTxFn(signedTx.to_hex());
         if (!exUnitEVA) throw 'evaluate failed';
@@ -527,9 +527,9 @@ class TreasuryScript {
 
             const redeemer = CardanoWasm.Redeemer.new(CardanoWasm.RedeemerTag.new_spend(), CardanoWasm.BigNum.from_str('0'), redeemerData, exUnits);
 
-            const witness = CardanoWasm.PlutusWitness.new_with_ref(CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(
+            const witness = CardanoWasm.PlutusWitness.new_with_ref_without_datum(CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(
                 treasuryCheckScriptHash, authorityCheckRefenceInput, CardanoWasm.Language.new_plutus_v2())
-                , CardanoWasm.DatumSource.new_ref_input(input)
+                // , CardanoWasm.DatumSource.new_ref_input(input)
                 , redeemer);
 
             txInputBuilder.add_plutus_script_input(witness, input, value);
@@ -572,9 +572,9 @@ class TreasuryScript {
                 exUnits
             );
 
-            const witness = CardanoWasm.PlutusWitness.new_with_ref(CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(
+            const witness = CardanoWasm.PlutusWitness.new_with_ref_without_datum(CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(
                 TreasuryScript.script().hash(), refenceInput, CardanoWasm.Language.new_plutus_v2())
-                , CardanoWasm.DatumSource.new_ref_input(input)
+                // , CardanoWasm.DatumSource.new_ref_input(input)
                 // , CardanoWasm.DatumSource.new(datum42)
                 , redeemer);
             // const witness = CardanoWasm.PlutusWitness.new(TreasuryScript.script(),datum42,redeemer);
@@ -657,15 +657,39 @@ class TreasuryScript {
                 changeValueLastUtxo = utils.funValue({ coins: totalAda - adaAmountPerUtxo * (outputCount - 1), assets: { [redeemProof.tokenId]: totalChange - tokenAmountPerUtxo * (outputCount - 1) } });
                 const minAda = utils.getMinAdaOfUtxo(protocolParams, TreasuryScript.address(groupInfo[contractMgr.GroupNFT.StkVh]), changeValuePerUtxo, datum42);
                 const minAdaLast = utils.getMinAdaOfUtxo(protocolParams, TreasuryScript.address(groupInfo[contractMgr.GroupNFT.StkVh]), changeValueLastUtxo, datum42);
-                if (adaAmountPerUtxo < minAda) {
-                    changeValuePerUtxo.set_coin(CardanoWasm.BigNum.from_str('' + minAda));
-                }
-                if (changeValueLastUtxo.coin().less_than(CardanoWasm.BigNum.from_str('' + minAdaLast))) {
-                    changeValueLastUtxo.set_coin(CardanoWasm.BigNum.from_str('' + minAdaLast));
+                // if (adaAmountPerUtxo < minAda) {
+                changeValuePerUtxo.set_coin(CardanoWasm.BigNum.from_str('' + minAda));
+                // }
+                // if (changeValueLastUtxo.coin().less_than(CardanoWasm.BigNum.from_str('' + minAdaLast))) {
+                changeValueLastUtxo.set_coin(CardanoWasm.BigNum.from_str('' + minAdaLast));
+                // }
+
+                if (foundationAddr) {
+                    let tmpCoins = 0;
+                    for (let i = 0; i < outputCount; i++) {
+                        if (i == outputCount - 1) tmpCoins += changeValueLastUtxo.coin().to_str() * 1;
+                        else tmpCoins += changeValuePerUtxo.coin().to_str() * 1;
+                    }
+                    tmpCoins += redeemProof.adaAmount;
+
+                    const outputCoinTmp = spendInputs.total_value().coin().to_str() * 1 - tmpCoins;
+                    if (outputCoinTmp > 0) {
+                        const minAdaTmp = utils.getMinAdaOfUtxo(protocolParams
+                            , 'addr_test1qz6twkzgss75sk379u0e27phvwhmtqqfuhl5gnx7rh7nux2xg4uwrhx9t58far8hp3a06hfdfzlsxgfrzqv5ryc78e4s4dwh26'
+                            , { coins: outputCoinTmp });
+                        if (minAdaTmp < outputCoinTmp) {
+                            changeValuePerUtxo.set_coin(CardanoWasm.BigNum.from_str('' + minAda));
+                            changeValueLastUtxo.set_coin(CardanoWasm.BigNum.from_str('' + minAdaLast));
+                        } else {
+                            changeValuePerUtxo.set_coin(CardanoWasm.BigNum.from_str('' + adaAmountPerUtxo));
+                            changeValueLastUtxo.set_coin(CardanoWasm.BigNum.from_str('' + totalAda - adaAmountPerUtxo * (outputCount - 1)));
+                        }
+                    }
                 }
 
             }
             // console.log(changeValueLastUtxo.to_json());
+            let treasuryValueOutput = CardanoWasm.Value.new(CardanoWasm.BigNum.from_str('0'));
             for (let i = 0; i < outputCount; i++) {
 
                 let treasuryChangeOutput;
@@ -678,6 +702,20 @@ class TreasuryScript {
                 treasuryChangeOutput.set_plutus_data(datum42);
                 txBuilder.add_output(treasuryChangeOutput);
                 // console.log('treasuryChangeOutput:', treasuryChangeOutput.to_json());
+                treasuryValueOutput = treasuryValueOutput.checked_add(treasuryChangeOutput.amount());
+            }
+
+            treasuryValueOutput = treasuryValueOutput.checked_add(outputValue);
+            if ((redeemProof.tokenId !== '') && (spendInputs.total_value().coin().to_str() * 1 > treasuryValueOutput.coin().to_str() * 1)) {
+                const foundationValue = spendInputs.total_value().checked_sub(treasuryValueOutput);
+                const foundationOutput = CardanoWasm.TransactionOutput.new(CardanoWasm.Address.from_bech32(foundationAddr), foundationValue);
+                txBuilder.add_output(foundationOutput);
+            }
+        } else {
+            if ((redeemProof.amount !== '') && (spendInputs.total_value().coin().to_str() * 1 > treasuryValueOutput.coin().to_str() * 1)) {
+                const foundationValue = spendInputs.total_value().checked_sub(treasuryValueOutput);
+                const foundationOutput = CardanoWasm.TransactionOutput.new(CardanoWasm.Address.from_bech32(foundationAddr), foundationValue);
+                txBuilder.add_output(foundationOutput);
             }
         }
 
@@ -761,7 +799,7 @@ class TreasuryScript {
 
     }
 
-    static async transferFromTreasuryWithoutEvaluate(protocolParams, utxosForFee, utxosToSpend, scriptRefUtxo, groupNFTUtxo, funValueMap, toAddr, redeemProof, utxoForCollateral, treasuryCheckUxto, treasuryCheckRef, changeAddress, signFn, rawMetaData, ttl) {
+    static async transferFromTreasuryWithoutEvaluate(protocolParams, utxosForFee, utxosToSpend, scriptRefUtxo, groupNFTUtxo, foundationAddr, toAddr, redeemProof, utxoForCollateral, treasuryCheckUxto, treasuryCheckRef, changeAddress, signFn, rawMetaData, ttl) {
         const txBuilder = utils.initTxBuilder(protocolParams);
 
         const isTreasury = utils.addressToPkhOrScriptHash(redeemProof.to) == TreasuryScript.script().hash().to_hex();
@@ -836,9 +874,9 @@ class TreasuryScript {
 
             const redeemer = CardanoWasm.Redeemer.new(CardanoWasm.RedeemerTag.new_spend(), CardanoWasm.BigNum.from_str('0'), redeemerData, exUnits);
 
-            const witness = CardanoWasm.PlutusWitness.new_with_ref(CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(
+            const witness = CardanoWasm.PlutusWitness.new_with_ref_without_datum(CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(
                 treasuryCheckScriptHash, authorityCheckRefenceInput, CardanoWasm.Language.new_plutus_v2())
-                , CardanoWasm.DatumSource.new_ref_input(input)
+                // , CardanoWasm.DatumSource.new_ref_input(input)
                 , redeemer);
 
             txInputBuilder.add_plutus_script_input(witness, input, value);
@@ -891,9 +929,9 @@ class TreasuryScript {
                 exUnits
             );
 
-            const witness = CardanoWasm.PlutusWitness.new_with_ref(CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(
+            const witness = CardanoWasm.PlutusWitness.new_with_ref_without_datum(CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(
                 TreasuryScript.script().hash(), refenceInput, CardanoWasm.Language.new_plutus_v2())
-                , CardanoWasm.DatumSource.new_ref_input(input)
+                // , CardanoWasm.DatumSource.new_ref_input(input)
                 // , CardanoWasm.DatumSource.new(datum42)
                 , redeemer);
             // const witness = CardanoWasm.PlutusWitness.new(TreasuryScript.script(),datum42,redeemer);
@@ -926,29 +964,33 @@ class TreasuryScript {
         } else {
             valueOutputOfTreasury = spendInputs.total_value().checked_sub(outputValue);
         }
+
         // console.log('valueChangeOfTreasuryScript=', valueOutputOfTreasury.to_json());
 
         let changeValuePerUtxo;
         let changeValueLastUtxo;
 
-        let noChange = true;
-        if (redeemProof.tokenId == '') {
-            noChange = valueOutputOfTreasury.is_zero();
-        } else {
-            if (valueOutputOfTreasury.multiasset()) {
-                const assetName = CardanoWasm.AssetName.new(Buffer.from(tokenName, 'hex'));
-                const asset = valueOutputOfTreasury.multiasset().get_asset(CardanoWasm.ScriptHash.from_hex(policy_id), assetName);
-                // console.log(asset.to_str());
-                noChange = asset.is_zero();
-            } else {
-                noChange = true;
-            }
-        }
+        let noChange = valueOutputOfTreasury.is_zero();//true;
+        // if (redeemProof.tokenId == '') {
+        //     noChange = valueOutputOfTreasury.is_zero();
+        // } else {
+        //     if (valueOutputOfTreasury.multiasset()) {
+        //         const assetName = CardanoWasm.AssetName.new(Buffer.from(tokenName, 'hex'));
+        //         const asset = valueOutputOfTreasury.multiasset().get_asset(CardanoWasm.ScriptHash.from_hex(policy_id), assetName);
+        //         // console.log(asset.to_str());
+        //         noChange = valueOutputOfTreasury.is_zero();//asset.is_zero();
+        //     } else {
+        //         noChange = true;
+        //     }
+        // }
 
         const outputCount = redeemProof.outputCount;
+        if (noChange && outputCount > 0 || !noChange && outputCount <= 0) throw `outputCount = ${outputCount} not match change flag ${!noChange}`;
+
+        // if(noChange && outputCount > 0 || !noChange && outputCount <= 0) throw `treasury change value = ${!noChange} is mismatch with outputCount = ${redeemProof.outputCount}`;
         if (!noChange && outputCount > 0) {
 
-            if (redeemProof.amount === 0) {
+            if (redeemProof.amount === 0) {// cross ada
                 const totalChange = valueOutputOfTreasury.coin().to_str() * 1;
                 const coinPerUtxo = Math.floor(totalChange / outputCount);
 
@@ -972,15 +1014,39 @@ class TreasuryScript {
                 changeValueLastUtxo = utils.funValue({ coins: totalAda - adaAmountPerUtxo * (outputCount - 1), assets: { [redeemProof.tokenId]: totalChange - tokenAmountPerUtxo * (outputCount - 1) } });
                 const minAda = utils.getMinAdaOfUtxo(protocolParams, TreasuryScript.address(groupInfo[contractMgr.GroupNFT.StkVh]), changeValuePerUtxo, datum42);
                 const minAdaLast = utils.getMinAdaOfUtxo(protocolParams, TreasuryScript.address(groupInfo[contractMgr.GroupNFT.StkVh]), changeValueLastUtxo, datum42);
-                if (adaAmountPerUtxo < minAda) {
-                    changeValuePerUtxo.set_coin(CardanoWasm.BigNum.from_str('' + minAda));
-                }
-                if (changeValueLastUtxo.coin().less_than(CardanoWasm.BigNum.from_str('' + minAdaLast))) {
-                    changeValueLastUtxo.set_coin(CardanoWasm.BigNum.from_str('' + minAdaLast));
+                // if (adaAmountPerUtxo < minAda) {
+                changeValuePerUtxo.set_coin(CardanoWasm.BigNum.from_str('' + minAda));
+                // }
+                // if (changeValueLastUtxo.coin().less_than(CardanoWasm.BigNum.from_str('' + minAdaLast))) {
+                changeValueLastUtxo.set_coin(CardanoWasm.BigNum.from_str('' + minAdaLast));
+                // }
+
+                if (foundationAddr) {
+                    let tmpCoins = 0;
+                    for (let i = 0; i < outputCount; i++) {
+                        if (i == outputCount - 1) tmpCoins += changeValueLastUtxo.coin().to_str() * 1;
+                        else tmpCoins += changeValuePerUtxo.coin().to_str() * 1;
+                    }
+                    tmpCoins += redeemProof.adaAmount;
+
+                    const outputCoinTmp = spendInputs.total_value().coin().to_str() * 1 - tmpCoins;
+                    if (outputCoinTmp > 0) {
+                        const minAdaTmp = utils.getMinAdaOfUtxo(protocolParams
+                            , 'addr_test1qz6twkzgss75sk379u0e27phvwhmtqqfuhl5gnx7rh7nux2xg4uwrhx9t58far8hp3a06hfdfzlsxgfrzqv5ryc78e4s4dwh26'
+                            , { coins: outputCoinTmp });
+                        if (minAdaTmp < outputCoinTmp) {
+                            changeValuePerUtxo.set_coin(CardanoWasm.BigNum.from_str('' + minAda));
+                            changeValueLastUtxo.set_coin(CardanoWasm.BigNum.from_str('' + minAdaLast));
+                        } else {
+                            changeValuePerUtxo.set_coin(CardanoWasm.BigNum.from_str('' + adaAmountPerUtxo));
+                            changeValueLastUtxo.set_coin(CardanoWasm.BigNum.from_str('' + totalAda - adaAmountPerUtxo * (outputCount - 1)));
+                        }
+                    }
                 }
 
             }
             // console.log(changeValueLastUtxo.to_json());
+            let treasuryValueOutput = CardanoWasm.Value.new(CardanoWasm.BigNum.from_str('0'));
             for (let i = 0; i < outputCount; i++) {
 
                 let treasuryChangeOutput;
@@ -993,6 +1059,23 @@ class TreasuryScript {
                 treasuryChangeOutput.set_plutus_data(datum42);
                 txBuilder.add_output(treasuryChangeOutput);
                 // console.log('treasuryChangeOutput:', treasuryChangeOutput.to_json());
+                treasuryValueOutput = treasuryValueOutput.checked_add(treasuryChangeOutput.amount());
+            }
+
+            treasuryValueOutput = treasuryValueOutput.checked_add(outputValue);
+            console.log('spendInputs:',spendInputs.total_value().to_json());
+            console.log('treasuryValueOutput:',treasuryValueOutput.to_json());
+            if ((redeemProof.tokenId !== '') && (spendInputs.total_value().coin().to_str() * 1 > treasuryValueOutput.coin().to_str() * 1)) {
+                const foundationValue = spendInputs.total_value().checked_sub(treasuryValueOutput);
+                console.log('foundationValue:',foundationValue.to_json());
+                const foundationOutput = CardanoWasm.TransactionOutput.new(CardanoWasm.Address.from_bech32(foundationAddr), foundationValue);
+                txBuilder.add_output(foundationOutput);
+            }
+        } else {
+            if ((redeemProof.tokenId !== '') && (spendInputs.total_value().coin().to_str() * 1 > treasuryValueOutput.coin().to_str() * 1)) {
+                const foundationValue = spendInputs.total_value().checked_sub(treasuryValueOutput);
+                const foundationOutput = CardanoWasm.TransactionOutput.new(CardanoWasm.Address.from_bech32(foundationAddr), foundationValue);
+                txBuilder.add_output(foundationOutput);
             }
         }
 
@@ -1006,7 +1089,7 @@ class TreasuryScript {
             txBuilder.add_output(treasuryChangeOutput);
         }
         if (utils.addressToPkhOrScriptHash(toAddr) == TreasuryScript.script().hash().to_hex()) {
-            // output.set_plutus_data(datum42);
+            output.set_plutus_data(datum42);
         } else {
             txBuilder.add_output(output);
         }
@@ -1096,7 +1179,7 @@ class MappingTokenScript {
 
     static policy_id() {
         // return this.script().hash().to_hex();
-        if(!MAPPINGTOKEN_POLICY) throw 'not initialized'
+        if (!MAPPINGTOKEN_POLICY) throw 'not initialized'
         return MAPPINGTOKEN_POLICY;
     }
 
@@ -1949,7 +2032,7 @@ class CheckTokenScriptBase {
             const index = inputs_arr.indexOf(adminNftInfo.adminNftUtxo.txHash + '#' + adminNftInfo.adminNftUtxo.index);
             exUintEVA = exUnitTx['spend:' + index];
         }
-        contractMgr.AdminNFTHolderScript.usingAdminNft(protocolParams, txBuilder, txInputBuilder, adminNftInfo.adminNftUtxo, adminNftInfo.adminNftHoldRefScript, adminNftInfo.mustSignBy,exUintEVA);
+        contractMgr.AdminNFTHolderScript.usingAdminNft(protocolParams, txBuilder, txInputBuilder, adminNftInfo.adminNftUtxo, adminNftInfo.adminNftHoldRefScript, adminNftInfo.mustSignBy, exUintEVA);
         txBuilder.set_inputs(txInputBuilder);
         // console.log(txBuilder.get_total_input().to_json());
         // if (ttl) {
