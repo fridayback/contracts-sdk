@@ -204,7 +204,7 @@ module.exports.init_ogmios = async function (hostServer = { host: '127.0.0.1', p
         if (hostServer.tls) tls = hostServer.tls;
     }
     connectConfig = {host,port,tls};
-    context = await createInteractionContext(errorHandler, closeHandler, { connection: { host, port, tls }, interactionType: 'LongRunning' });
+    context = await createInteractionContext(errorHandler, closeHandler, { connection: { host, port:'', tls ,apiKey:'v0LXAjiRQAm3PNjlFSlqB8rfgUp7OExE'}, interactionType: 'LongRunning' });
     txSubmitclient = await createTxSubmissionClient(context);
     query = await createStateQueryClient(context);
     // const blockHeight = await query.blockHeight();

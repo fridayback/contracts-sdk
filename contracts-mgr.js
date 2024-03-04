@@ -623,7 +623,15 @@ class GroupInfoNFTHolderScript {
         asset.insert(assetName, CardanoWasm.BigNum.from_str('1'));
         mutiAsset.insert(scriptHash, asset);
 
-        const outputValue = CardanoWasm.Value.new_with_assets(CardanoWasm.BigNum.from_str('' + minAdaWithToken), mutiAsset);
+        const outputValue = CardanoWasm.Value.new_with_assets(CardanoWasm.BigNum.from_str('' + (minAdaWithToken+0)), mutiAsset);
+        {
+            // const asset = CardanoWasm.Assets.new();
+            // const assetName = CardanoWasm.AssetName.new(Buffer.from('4164612d57616e','hex'));
+            // asset.insert(assetName, CardanoWasm.BigNum.from_str('123'));
+            // const scriptHash = CardanoWasm.ScriptHash.from_hex('924c3452ee0c3baeca9446edb6aebe032e7047ab1dafcd216b89ac5d');
+            // mutiAsset.insert(scriptHash, asset);
+        }
+        
         let outputAddress = GroupInfoNFTHolderScript.address();
         if (action == GroupNFT.Version) {
             outputAddress = CardanoWasm.EnterpriseAddress.new(Network_Id, CardanoWasm.StakeCredential.from_scripthash(
