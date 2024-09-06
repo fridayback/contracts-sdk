@@ -1,30 +1,19 @@
 
-const {
-    createInteractionContext,
-    createStateQueryClient,
-    createTxSubmissionClient, TxSubmission
-} = require('@cardano-ogmios/client');
 const CardanoWasm = require('@emurgo/cardano-serialization-lib-nodejs');
-
+const query = require('./chain-utils');
 const utils = require('./utils');
 const cbor = require('cbor-sync');
 
 
 
 //---------------------------------------------------------------------------------------------
-let context;
-let txSubmitclient;
-let query;
+// let context;
+// let txSubmitclient;
+// let query;
+// let connectConfig;
+let timer;
 
-const errorHandler = async (error) => {
-    console.error(error);
-    await txSubmitclient.shutdown();
-}
 
-const closeHandler = async (code, reason) => {
-    // console.log('WS close: code =', code, 'reason =', reason);
-    // await client.shutdown();
-}
 //---------------------------------------------------------------------------------------------
 
 // const BlockFrostAPI = require('@blockfrost/blockfrost-js').BlockFrostAPI;
@@ -58,27 +47,6 @@ module.exports.getParamProtocol = async function (via = 'ogmios') {
         return protocolParams;
     } else {
         throw 'Not Support BlockFrostApi'
-        // let latest_block = await blockFrostApi.blocksLatest();
-        // let protocolParams = await blockFrostApi.epochsParameters(latest_block.epoch);
-
-        // let index = 0;
-        // const v1 = CardanoWasm.CostModel.new();
-        // for (const key in protocolParams.cost_models.PlutusV1) {
-        //     v1.set(index, CardanoWasm.Int.new_i32(protocolParams.cost_models.PlutusV1[key]));
-        //     index++;
-        // }
-
-        // const v2 = CardanoWasm.CostModel.new();
-        // index = 0;
-        // for (const key in protocolParams.cost_models.PlutusV2) {
-        //     v2.set(index, CardanoWasm.Int.new_i32(protocolParams.cost_models.PlutusV2[key]));
-        //     index++;
-        // }
-
-        // protocolParams.costModels = CardanoWasm.Costmdls.new();
-        // protocolParams.costModels.insert(CardanoWasm.Language.new_plutus_v1(), v1);
-        // protocolParams.costModels.insert(CardanoWasm.Language.new_plutus_v2(), v2);
-        // return protocolParams;
     }
 
 }
@@ -126,20 +94,7 @@ module.exports.getUtxo = async function (address, coinValue = 0, via = 'ogmios')
         }
     } else {
         throw 'Not Support BlockFrostApi'
-        // const utxos = await blockFrostApi.addressesUtxosAll(address);
-
-        // for (let i = 0; i < utxos.length; i++) {
-        //     const utxo = utxos[i];
-        //     if (coinValue && CardanoWasm.BigNum.from_str(utxo.amount[0].quantity).compare(
-        //         CardanoWasm.BigNum.from_str('' + coinValue)
-        //     ) < 0) continue;
-        //     ret.push({
-        //         txHash: utxo.tx_hash,
-        //         index: utxo.output_index,
-        //         value: utxo.amount[0].quantity,
-        //         address: address
-        //     })
-        // }
+        
     }
 
     return ret;
@@ -177,7 +132,7 @@ module.exports.waitTxConfirmed = async (addr, txHash, slots = 20) => {
 
 module.exports.submitTx = async function (signedTx) {
     if (interVia == 'ogmios') {
-        return await txSubmitclient.submitTx(Buffer.from(signedTx.to_bytes()).toString('hex'));
+        return await query.submitTx(Buffer.from(signedTx.to_bytes()).toString('hex'));
 
     } else {
         throw 'Not Support BlockFrostApi'
@@ -199,32 +154,10 @@ module.exports.signFn = (skey, hash) => {
     return { vkey, signature };
 }
 
-module.exports.init_ogmios = async function (hostServer = { host: '127.0.0.1', port: 1337, tls: false}) {
-    let host = '127.0.0.1';
-    let port = 1337;
-    let tls = false;
-    let apiKey = undefined;
-    if (hostServer) {
-        if (hostServer.host) host = hostServer.host;
-        if (hostServer.port) port = hostServer.port;
-        if (hostServer.tls) tls = hostServer.tls;
-    }
-    context = await createInteractionContext(errorHandler, closeHandler, { connection: { host, port, tls }, interactionType: 'LongRunning' });
-    txSubmitclient = await createTxSubmissionClient(context);
-    query = await createStateQueryClient(context);
-    const blockHeight = await query.blockHeight();
-    console.log(blockHeight);
-    // const ss = await this.getUtxo('addr_test1qz6twkzgss75sk379u0e27phvwhmtqqfuhl5gnx7rh7nux2xg4uwrhx9t58far8hp3a06hfdfzlsxgfrzqv5ryc78e4s4dwh26')
-    // console.log(blockHeight);
-    // // context.socket.close()
-    // const fd = await query.eraStart();
-    // const soltConfig = await query.eraSummaries();
-    // const tips = await query.chainTip();
-    // const genisis = await query.genesisConfig();
-
-    // console.log('===>',this.soltToTimestamp(28180867,soltConfig,genisis));
+module.exports.init_ogmios = async function (hostServer) {
+    query.setBaseUrl(hostServer);
 }
-//eb1905f4b011bc3412d65a1977668abbe4fa3538d3bd4e828076d64d
+
 module.exports.getdelegationsAndRewards = async function (stakeKeyHash) {
     const infos = await query.delegationsAndRewards([stakeKeyHash]);
     return infos[stakeKeyHash];
@@ -270,13 +203,14 @@ module.exports.getLastestSolt = async function () {
     return a.slot;
 }
 
-module.exports.unInit = async function () {
-    context.socket.close();
+module.exports.blockHeight = async function () {
+    const a = await query.blockHeight();
+    return a.slot;
 }
 
 module.exports.evaluateTx = async (signedTx) => {
     try {
-        const cost = await TxSubmission.evaluateTx(context, signedTx.to_hex());
+        const cost = await query.evaluateTx(signedTx.to_hex());
         // console.log(JSON.stringify(cost));
         return cost;
     } catch (e) {
@@ -290,7 +224,7 @@ module.exports.evaluateTx = async (signedTx) => {
 
 module.exports.evaluate = async (signedTxRaw) => {
     try {
-        const cost = await TxSubmission.evaluateTx(context, signedTxRaw);
+        const cost = await query.evaluateTx(signedTxRaw);
         // console.log(JSON.stringify(cost));
         return cost;
     } catch (e) {
@@ -301,7 +235,6 @@ module.exports.evaluate = async (signedTxRaw) => {
         }
     }
 }
-
 
 module.exports.fixTxExuintByEvaluate = async function (protocolParams, txRaw, collateralUtxos, gasMutipl = 1) {
     const exUnitEVA = await this.evaluate(txRaw);

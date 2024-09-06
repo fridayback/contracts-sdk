@@ -59,7 +59,7 @@ const signatories = [
 ]
 
 const mustSignBy = [
-    admin, adminNext
+    admin//, adminNext
 ];
 
 let input = {
@@ -363,7 +363,7 @@ async function main() {
         // return;
     }
     // return;
-    let signFn;
+    // let signFn;
 
     // const treasuryCheckRef = await tryScriptRefUtxo(contracts.TreasuryCheckScript.script());
     // const mintCheckRef = await tryScriptRefUtxo(contracts.MintCheckScript.script());
@@ -372,17 +372,34 @@ async function main() {
         const utxosForFee = await getUtxoForFee();
         let groupInfo = await getGroupInfo();
         console.log('before upgrade groupNFTHolder:', JSON.stringify(groupInfo));
-        const newHolder = contractsMgr.GroupInfoNFTHolderScript.address().to_bech32(sdk.ADDR_PREFIX);
+        const newHolder = 'addr_test1wqxt0mepyg5cp4apcf4k07n88d224cxed6mmd2yd93j8hsqw5s829';//contractsMgr.GroupInfoNFTHolderScript.address().to_bech32(sdk.ADDR_PREFIX);
         const groupInfoUtxo = await sdk.getGroupInfoNft();
-        const newDatum = groupInfoUtxo.datum;
+
+        const params = {
+            [contractsMgr.GroupNFT.Version + '']:"73d1b47ecda59944e6cfe3ad7582993f1df1d14876a2454744ef26dc"
+            ,[contractsMgr.GroupNFT.Admin + '']:"35c3cfda4652b26438b567ec7966a3db0deda9a9a0185cf3d67cb5e3"
+            ,[contractsMgr.GroupNFT.GPK + '']:"d55a510b6890d6eb2fc778e33db2b9376c9427f247f1117ec227be8ae5303514"
+            ,[contractsMgr.GroupNFT.BalanceWorker + '']:"b4b75848843d485a3e2f1f95783763afb58009e5ff444cde1dfd3e19"
+            ,[contractsMgr.GroupNFT.TreasuryCheckVH + '']:"d73c3feecfe48ece5f900708d3dab640cdc36dde774d12ac4c8b2f1e"
+            ,[contractsMgr.GroupNFT.OracleWorker + '']:"b4b75848843d485a3e2f1f95783763afb58009e5ff444cde1dfd3e19"
+            ,[contractsMgr.GroupNFT.MintCheckVH + '']:"821caca79e6745ba3b8780e3c9cf4a57ebc463ca596d1676ed5de5df"
+            ,[contractsMgr.GroupNFT.StkVh + '']:"a94db90fe8f094e5178ee585046f7a8f4bea06d5c04b4ab195f08f16"
+            ,[contractsMgr.GroupNFT.StkCheckVh + '']:"c61727cf755a888e19de2530f96435780a67dfb61e49fcfd49e33d18"
+            ,'9':"e9f9f6f5bfd064179d663d9258a75931ae00ee0042765ab341c25cf4"  // NFTRefHolderVH
+            ,'10':"a68a4b8ec97ca4a8726f754f76df9ce0abbfca9861b1a2f16db45783" // NFTTreasuryCheckVH
+            ,'11':"8b777ff575151bbcb4f414895f597e0cf5bb605916c9394e4c9b93a8" // NFTMintCheckVH
+        }
+
+        // const newDatum = genGroupInfoDatum(params).toString('hex');//groupInfoUtxo.datum;
+        const newDatum = 'd8799f9f581c0cb7ef21222980d7a1c26b67fa673b54aae0d96eb7b6a88d2c647bc0581c0710d11245e21ddf6d93ca9cf141ef4aa6c39c1e4db1228f349dd0835820d55a510b6890d6eb2fc778e33db2b9376c9427f247f1117ec227be8ae5303514581cb4b75848843d485a3e2f1f95783763afb58009e5ff444cde1dfd3e19581cd62910fbb1e4cf9d01814b11314c5f58fc0df1e47da498daa3e74046581cb4b75848843d485a3e2f1f95783763afb58009e5ff444cde1dfd3e19581c50e1278e7a7459acabc9a53406ac034549f40cf310612a009f9ad7e9581c390e946b8d35476ba62e6e90fb5110e07550d0d67874ad0f726c3f04581c2e617283c6d813be4f186419c2067a74c5379ad3b724c473aaad177b581ce9f9f6f5bfd064179d663d9258a75931ae00ee0042765ab341c25cf4581c788bd845cfeb91e86c87c72918f632b8deb5afdc92060bb7c18852c2581c07de0766e9e424eafaa52ac64cda6ad01567e0eb5f96ca1f82a42b23ffff';
         let signedTx = await sdk.upgradeGroupNFTHolder(newHolder, newDatum, mustSignBy, utxosForFee, [collateralUtxo], admin);
         console.log('--%%%%%%%%%%%%%1-------\n', signedTx.to_json());
         const exUnit = await finalTxEvaluate(signedTx);
         signedTx = await sdk.upgradeGroupNFTHolder(newHolder, newDatum, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
         console.log('--%%%%%%%%%%%%%2-------\n', signedTx.to_json());
-        // let o = await submitAndWaitConfirmed(signedTx);
-        // groupInfo = await getGroupInfo();
-        // console.log('after setAdmin:', JSON.stringify(groupInfo));
+        let o = await submitAndWaitConfirmed(signedTx);
+        groupInfo = await getGroupInfo();
+        console.log('after setAdmin:', JSON.stringify(groupInfo));
     }
 
     {
@@ -553,3 +570,33 @@ main().then(() => {
 }).finally(() => {
     // ogmiosUtils.unInit();
 })
+
+
+function genGroupInfoDatum(groupInfoParams) {
+    const ls = CardanoWasm.PlutusList.new();
+
+    const params = CardanoWasm.PlutusList.new();
+    params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[contractsMgr.GroupNFT.Version + ''], 'hex')));
+    params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[contractsMgr.GroupNFT.Admin + ''], 'hex')));
+    params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[contractsMgr.GroupNFT.GPK + ''], 'hex')));
+    params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[contractsMgr.GroupNFT.BalanceWorker + ''], 'hex')));
+    params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[contractsMgr.GroupNFT.TreasuryCheckVH + ''], 'hex')));
+    params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[contractsMgr.GroupNFT.OracleWorker + ''], 'hex')));
+    params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[contractsMgr.GroupNFT.MintCheckVH + ''], 'hex')));
+    params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[contractsMgr.GroupNFT.StkVh + ''], 'hex')));
+    params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[contractsMgr.GroupNFT.StkCheckVh + ''], 'hex')));
+    // NFTRefHolderVH | NFTTreasuryCheckVH | NFTMintCheckVH
+    params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[contractsMgr.GroupNFT.NFTRefHolderVH + ''], 'hex')));
+    params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[contractsMgr.GroupNFT.NFTTreasuryCheckVH + ''], 'hex')));
+    params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[contractsMgr.GroupNFT.NFTMintCheckVH + ''], 'hex')));
+
+    ls.add(CardanoWasm.PlutusData.new_list(params));
+
+    // CardanoWasm.PlutusData.new_empty_constr_plutus_data(CardanoWasm.BigNum.from_str('0'))
+    return CardanoWasm.PlutusData.new_constr_plutus_data(
+        CardanoWasm.ConstrPlutusData.new(
+            CardanoWasm.BigNum.from_str('0'),
+            ls
+        )
+    )
+}

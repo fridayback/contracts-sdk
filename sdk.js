@@ -1,6 +1,7 @@
 const CardanoWasm = require('@emurgo/cardano-serialization-lib-nodejs');
 const utils = require('./utils');
-const ogmiosUtils = require('./ogmios-utils');
+let ogmiosUtils;
+
 
 const contracts = require('./contracts');
 const contractsMgr = require('./contracts-mgr');
@@ -12,7 +13,7 @@ const ACTION_DEREGISTER = 2;
 
 class ContractSdk {
 
-    constructor(isMainnet = false, scriptRefOwnerAddr) {
+    constructor(isMainnet = false, scriptRefOwnerAddr = undefined, conViaWs = false) {
         contracts.init(isMainnet);
         this.ADDR_PREFIX = isMainnet ? 'addr' : 'addr_test';
         if (!scriptRefOwnerAddr) {
@@ -24,11 +25,18 @@ class ContractSdk {
         }
 
         this.allScriptRefUtxo = [];
+        this.conViaWs = conViaWs;
     }
 
     async init(ogmiosHost, ogmiosPort = 1337, tls = false) {
+        if (this.conViaWs) {
+            ogmiosUtils = require('./ogmios-utils');
+            await ogmiosUtils.init_ogmios({ host: ogmiosHost, port: ogmiosPort, tls: tls });
+        } else {
+            ogmiosUtils = require('./ogmios-utils2');
+            await ogmiosUtils.init_ogmios(ogmiosHost);
+        }
 
-        await ogmiosUtils.init_ogmios({ host: ogmiosHost, port: ogmiosPort, tls: tls });
         this.groupInfoHolderRef = await this.getScriptRefUtxo(contractsMgr.GroupInfoNFTHolderScript.script());
         this.adminNftHoldRefScript = await this.getScriptRefUtxo(contractsMgr.AdminNFTHolderScript.script());
         this.stakeScriptRefUtxo = await this.getScriptRefUtxo(contractsMgr.StoremanStackScript.script());
@@ -49,6 +57,7 @@ class ContractSdk {
 
     async getGroupInfoNft() {
         const groupInfoHolder = contractsMgr.GroupInfoNFTHolderScript.address().to_bech32(this.ADDR_PREFIX);
+        // const groupInfoHolder = 'addr_test1wq6ums0nk5p39gggpv8nxpjpgpqyfdu3d2hsy3wrwtyhfgq3r7dpg';
 
         const groupInfoToken = (await ogmiosUtils.getUtxo(groupInfoHolder)).find(o => {
             for (const tokenId in o.value.assets) {
@@ -83,7 +92,7 @@ class ContractSdk {
         let mustSignBy = [];
         for (let i = 0; i < mustSignByAddrs.length; i++) {
             const addr = mustSignByAddrs[i];
-            if (utils.addressType(addr) == CardanoWasm.StakeCredKind.Script) {
+            if (utils.addressType(addr) == CardanoWasm.CredKind.Script) {
                 throw 'not supports script address'
             }
 
@@ -173,7 +182,7 @@ class ContractSdk {
         let mustSignBy = [];
         for (let i = 0; i < mustSignByAddrs.length; i++) {
             const addr = mustSignByAddrs[i];
-            if (utils.addressType(addr) == CardanoWasm.StakeCredKind.Script) {
+            if (utils.addressType(addr) == CardanoWasm.CredKind.Script) {
                 throw 'not supports script address'
             }
 
@@ -266,7 +275,7 @@ class ContractSdk {
         let mustSignBy = [];
         for (let i = 0; i < mustSignByAddrs.length; i++) {
             const addr = mustSignByAddrs[i];
-            if (utils.addressType(addr) == CardanoWasm.StakeCredKind.Script) {
+            if (utils.addressType(addr) == CardanoWasm.CredKind.Script) {
                 throw 'not supports script address'
             }
 
@@ -322,7 +331,7 @@ class ContractSdk {
         let mustSignBy = [];
         for (let i = 0; i < mustSignByAddrs.length; i++) {
             const addr = mustSignByAddrs[i];
-            if (utils.addressType(addr) == CardanoWasm.StakeCredKind.Script) {
+            if (utils.addressType(addr) == CardanoWasm.CredKind.Script) {
                 throw 'not supports script address'
             }
 
@@ -346,7 +355,7 @@ class ContractSdk {
         let mustSignBy = [];
         for (let i = 0; i < mustSignByAddrs.length; i++) {
             const addr = mustSignByAddrs[i];
-            if (utils.addressType(addr) == CardanoWasm.StakeCredKind.Script) {
+            if (utils.addressType(addr) == CardanoWasm.CredKind.Script) {
                 throw 'not supports script address'
             }
 
@@ -361,7 +370,7 @@ class ContractSdk {
         return signedTx;
     }
 
-    async burnTreasuryCheckTokenWithHolder(amount,holder, mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+    async burnTreasuryCheckTokenWithHolder(amount, holder, mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
         const groupInfoUtxo = await this.getGroupInfoNft();
         const groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(groupInfoUtxo.datum);
         const adminNftUtxo = await this.getAdminNft();
@@ -377,7 +386,7 @@ class ContractSdk {
         let mustSignBy = [];
         for (let i = 0; i < mustSignByAddrs.length; i++) {
             const addr = mustSignByAddrs[i];
-            if (utils.addressType(addr) == CardanoWasm.StakeCredKind.Script) {
+            if (utils.addressType(addr) == CardanoWasm.CredKind.Script) {
                 throw 'not supports script address'
             }
 
@@ -392,7 +401,7 @@ class ContractSdk {
         return signedTx;
     }
 
-    async burnMintCheckTokenWithHolder(amount,holder, mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+    async burnMintCheckTokenWithHolder(amount, holder, mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
         const groupInfoUtxo = await this.getGroupInfoNft();
         const groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(groupInfoUtxo.datum);
         const adminNftUtxo = await this.getAdminNft();
@@ -408,7 +417,7 @@ class ContractSdk {
         let mustSignBy = [];
         for (let i = 0; i < mustSignByAddrs.length; i++) {
             const addr = mustSignByAddrs[i];
-            if (utils.addressType(addr) == CardanoWasm.StakeCredKind.Script) {
+            if (utils.addressType(addr) == CardanoWasm.CredKind.Script) {
                 throw 'not supports script address'
             }
 
@@ -439,7 +448,7 @@ class ContractSdk {
         let mustSignBy = [];
         for (let i = 0; i < mustSignByAddrs.length; i++) {
             const addr = mustSignByAddrs[i];
-            if (utils.addressType(addr) == CardanoWasm.StakeCredKind.Script) {
+            if (utils.addressType(addr) == CardanoWasm.CredKind.Script) {
                 throw 'not supports script address'
             }
 
@@ -470,7 +479,7 @@ class ContractSdk {
         let mustSignBy = [];
         for (let i = 0; i < mustSignByAddrs.length; i++) {
             const addr = mustSignByAddrs[i];
-            if (utils.addressType(addr) == CardanoWasm.StakeCredKind.Script) {
+            if (utils.addressType(addr) == CardanoWasm.CredKind.Script) {
                 throw 'not supports script address'
             }
 
