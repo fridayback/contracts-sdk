@@ -22,12 +22,12 @@ const AdminNFTName = 'AdminNFTCoin';
 const GroupInfoTokenName = 'GroupInfoTokenCoin';
 
 
-const DEV = true;
+const DEV = false;
 function getCostModels(protocolParams) {
     if (DEV) {
         return protocolParams.costModels;
     } else {
-        return CardanoWasm.TxBuilderConstants.plutus_vasil_cost_models();
+        return CardanoWasm.TxBuilderConstants.plutus_conway_cost_models();
     }
 }
 
@@ -59,7 +59,7 @@ class AdminNFT {
             const value = utils.funValue(utxoForFee.value);
             const from = CardanoWasm.Address.from_bech32(utxoForFee.address);
             // totalInputValue = totalInputValue.checked_add(value);
-            txBuilder.add_input(from, input, value);
+            txBuilder.add_regular_input(from, input, value);
         }
 
         //step2: construct mint
@@ -68,8 +68,8 @@ class AdminNFT {
             CardanoWasm.TransactionHash.from_hex(scriptRef.txHash)
             , scriptRef.index
         );
-        const mint_plutus_script_source = CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(this.script().hash()
-            , scriptRefInput, CardanoWasm.Language.new_plutus_v2());
+        const mint_plutus_script_source = CardanoWasm.PlutusScriptSource.new_ref_input(this.script().hash()
+            , scriptRefInput, this.script().language_version(),this.script().bytes().byteLength);
 
         let ex_unit_mem = 7575293;//  4142333
         let ex_unit_cpu = 2880092692; //1447050275
@@ -106,7 +106,7 @@ class AdminNFT {
             const value = utils.funValue(utxoCollateral.value);
             const from = CardanoWasm.Address.from_bech32(utxoCollateral.address);
             collaterOwnerAddress = from;
-            txCollateralInputBuilder.add_input(from, input, value);
+            txCollateralInputBuilder.add_regular_input(from, input, value);
         }
 
         // const params = contractMgr.GroupNFT.groupInfoFromDatum(groupNFTUtxo.datum);
@@ -127,7 +127,7 @@ class AdminNFT {
 
         //if owner is contract ,output must has datum
         const toAddrType = utils.addressType(mintParams.owner);
-        if (toAddrType == CardanoWasm.StakeCredKind.Script) {
+        if (toAddrType == CardanoWasm.CredKind.Script) {
             outputOfMint.set_plutus_data(mintParams.datum);
         }
 
@@ -223,7 +223,117 @@ class GroupNFT {
         return ret;
     }
 
-    static async mint(protocolParams, utxosForFee, utxoForCollateral, scriptRef, groupInfoParams, changeAddress, ttl, signFn) {
+    static async mint(protocolParams, utxosForFee, utxoForCollateral, scriptRef, groupInfoParams, changeAddress, ttl, signFn){
+        const txBuilder = utils.initTxBuilder(protocolParams);
+
+        for (let i = 0; i < utxosForFee.length; i++) {
+            const utxoForFee = utxosForFee[i];
+            const txId = CardanoWasm.TransactionHash.from_bytes(Buffer.from(utxoForFee.txHash, 'hex'));
+            const input = CardanoWasm.TransactionInput.new(txId, utxoForFee.index);
+            // const value = CardanoWasm.Value.new(CardanoWasm.BigNum.from_str(utxoForFee.value + ''));
+            const value = utils.funValue(utxoForFee.value);
+            const from = CardanoWasm.Address.from_bech32(utxoForFee.address);
+            // totalInputValue = totalInputValue.checked_add(value);
+            txBuilder.add_regular_input(from, input, value);
+        }
+
+        //step2: construct mint
+        const mintBuilder = CardanoWasm.MintBuilder.new();
+        const scriptRefInput = CardanoWasm.TransactionInput.new(
+            CardanoWasm.TransactionHash.from_hex(scriptRef.txHash)
+            , scriptRef.index
+        );
+        const mint_plutus_script_source = CardanoWasm.PlutusScriptSource.new_ref_input(this.script().hash()
+            , scriptRefInput, this.script().language_version(),this.script().bytes().byteLength);
+
+        let ex_unit_mem = 7575293;//  4142333
+        let ex_unit_cpu = 2880092692; //1447050275
+
+        const exUnitsMint = CardanoWasm.ExUnits.new(
+            CardanoWasm.BigNum.from_str(ex_unit_mem + ''),//(EX_UNIT_A),//TODO----->903197
+            CardanoWasm.BigNum.from_str(ex_unit_cpu + '')//(EX_UNIT_B)306405352
+        );
+
+        const mintRedeemer = CardanoWasm.Redeemer.new(
+            CardanoWasm.RedeemerTag.new_mint(),
+            CardanoWasm.BigNum.from_str('0'),
+            CardanoWasm.PlutusData.new_empty_constr_plutus_data(CardanoWasm.BigNum.from_str('0')),
+            exUnitsMint
+        );
+        let mint_witnes = CardanoWasm.MintWitness.new_plutus_script(mint_plutus_script_source, mintRedeemer);
+
+
+        const assetName = CardanoWasm.AssetName.new(Buffer.from(GroupInfoTokenName));
+        // console.log(assetName.to_hex());
+        mintBuilder.add_asset(mint_witnes, assetName, CardanoWasm.Int.from_str('1'));
+
+
+
+
+        //step3: collater input
+        let collaterOwnerAddress;
+        const txCollateralInputBuilder = CardanoWasm.TxInputsBuilder.new();
+        for (let i = 0; i < utxoForCollateral.length; i++) {
+            const utxoCollateral = utxoForCollateral[i];
+            const txId = CardanoWasm.TransactionHash.from_bytes(Buffer.from(utxoCollateral.txHash, 'hex'));
+            const input = CardanoWasm.TransactionInput.new(txId, utxoCollateral.index);
+            // const value = CardanoWasm.Value.new(CardanoWasm.BigNum.from_str(utxoCollateral.value + ''));
+            const value = utils.funValue(utxoCollateral.value);
+            const from = CardanoWasm.Address.from_bech32(utxoCollateral.address);
+            collaterOwnerAddress = from;
+            txCollateralInputBuilder.add_regular_input(from, input, value);
+        }
+
+        // const params = contractMgr.GroupNFT.groupInfoFromDatum(groupNFTUtxo.datum);
+        // const requiredSigner = params[contractMgr.GroupNFT.BalanceWorker];
+
+
+        // const toAddr = CardanoWasm.Address.from_bech32(mintParams.owner);
+
+        const scriptHash = this.script().hash();
+        const groupInfoDatum = GroupNFT.genGroupInfoDatum(groupInfoParams);
+        const holderAddr = GroupInfoNFTHolderScript.address()
+        // const minAdaWithMintToken = utils.getMinAdaOfUtxo(protocolParams, toAddr, { coins: 1000000, assets: { [this.tokenId()]: 1 } }, mintParams.datum);
+        const minAdaWithMintToken = utils.getMinAdaOfUtxo(protocolParams, holderAddr, { coins: 1, assets: { [this.tokenId()]: 1 } }, groupInfoDatum);
+        const mutiAsset = CardanoWasm.MultiAsset.new();
+        const asset = CardanoWasm.Assets.new();
+        asset.insert(assetName, CardanoWasm.BigNum.from_str('1'));
+        mutiAsset.insert(scriptHash, asset);
+        let mintedValue = CardanoWasm.Value.new(CardanoWasm.BigNum.from_str('' + minAdaWithMintToken));
+        mintedValue.set_multiasset(mutiAsset);
+        const outputOfMint = CardanoWasm.TransactionOutput.new(holderAddr, mintedValue);
+       
+        outputOfMint.set_plutus_data(groupInfoDatum);
+
+
+        txBuilder.set_mint_builder(mintBuilder);
+        txBuilder.add_output(outputOfMint);
+
+
+        const costModesLib = getCostModels(protocolParams);
+        txBuilder.calc_script_data_hash(costModesLib);
+        txBuilder.set_collateral(txCollateralInputBuilder);
+        // console.log('min_fee:', txBuilder.min_fee().to_str());
+        txBuilder.set_total_collateral_and_return(txBuilder.min_fee().checked_mul(CardanoWasm.BigNum.from_str('2')), collaterOwnerAddress);
+        txBuilder.add_change_if_needed(CardanoWasm.Address.from_bech32(changeAddress));
+
+        let tx = txBuilder.build_tx();
+        const body = tx.body();
+        // console.log('real_fee:', body.fee().to_str());
+        const txHash = CardanoWasm.hash_transaction(body);
+        const signResult = await signFn(txHash.to_hex());
+
+        const vkeyWitnesses = CardanoWasm.Vkeywitnesses.new();
+        const vkeyWitness = CardanoWasm.Vkeywitness.from_json(JSON.stringify(signResult));
+        vkeyWitnesses.add(vkeyWitness);
+
+        const witnessSet = CardanoWasm.TransactionWitnessSet.from_bytes(tx.witness_set().to_bytes());
+        witnessSet.set_vkeys(vkeyWitnesses);
+
+        return CardanoWasm.Transaction.new(tx.body(), witnessSet);
+    }
+
+    static async mint2(protocolParams, utxosForFee, utxoForCollateral, scriptRef, groupInfoParams, changeAddress, ttl, signFn) {
         const fee = CardanoWasm.BigNum.from_str('256907');//fake fee value 255499
 
         const payPrvKey = CardanoWasm.PrivateKey.from_normal_bytes(Buffer.from('0000000000000000000000000000000000000000000000000000000000000000', 'hex'));
@@ -403,7 +513,7 @@ class GroupInfoNFTHolderScript {
     }
 
     static address() {
-        return CardanoWasm.EnterpriseAddress.new(Network_Id, CardanoWasm.StakeCredential.from_scripthash(GroupInfoNFTHolderScript.script().hash())).to_address();
+        return CardanoWasm.EnterpriseAddress.new(Network_Id, CardanoWasm.Credential.from_scripthash(GroupInfoNFTHolderScript.script().hash())).to_address();
     }
 
     static genRedeemer(action) {
@@ -534,7 +644,7 @@ class GroupInfoNFTHolderScript {
             // const value = CardanoWasm.Value.new(CardanoWasm.BigNum.from_str(utxoForFee.value + ''));
             const value = utils.funValue(utxoForFee.value);
             const from = CardanoWasm.Address.from_bech32(utxoForFee.address);
-            txInputBuilder.add_input(from, input, value);
+            txInputBuilder.add_regular_input(from, input, value);
         }
 
         let collaterOwnerAddress;
@@ -546,7 +656,7 @@ class GroupInfoNFTHolderScript {
             // const value = CardanoWasm.Value.new(CardanoWasm.BigNum.from_str(utxoCollateral.value + ''));
             const value = utils.funValue(utxoCollateral.value);
             const from = CardanoWasm.Address.from_bech32(utxoCollateral.address);
-            txCollateralInputBuilder.add_input(from, input, value);
+            txCollateralInputBuilder.add_regular_input(from, input, value);
             collaterOwnerAddress = from;
         }
         txBuilder.set_collateral(txCollateralInputBuilder);
@@ -605,7 +715,7 @@ class GroupInfoNFTHolderScript {
                 adminPKHForSign = params[GroupNFT.OracleWorker];
             }
             const witness = CardanoWasm.PlutusWitness.new_with_ref(
-                CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(GroupInfoNFTHolderScript.script().hash(), scriptRefInput, CardanoWasm.Language.new_plutus_v2())
+                CardanoWasm.PlutusScriptSource.new_ref_input(GroupInfoNFTHolderScript.script().hash(), scriptRefInput, GroupInfoNFTHolderScript.script().language_version(),GroupInfoNFTHolderScript.script().bytes().byteLength*1)
                 , CardanoWasm.DatumSource.new_ref_input(input)
                 , redeemer);
 
@@ -627,10 +737,10 @@ class GroupInfoNFTHolderScript {
         asset.insert(assetName, CardanoWasm.BigNum.from_str('1'));
         mutiAsset.insert(scriptHash, asset);
 
-        const outputValue = CardanoWasm.Value.new_with_assets(CardanoWasm.BigNum.from_str('' + minAdaWithToken), mutiAsset);
+        const outputValue = CardanoWasm.Value.new_with_assets(CardanoWasm.BigNum.from_str('' + (minAdaWithToken+0)), mutiAsset);
         let outputAddress = GroupInfoNFTHolderScript.address();
         if (action == GroupNFT.Version) {
-            outputAddress = CardanoWasm.EnterpriseAddress.new(Network_Id, CardanoWasm.StakeCredential.from_scripthash(
+            outputAddress = CardanoWasm.EnterpriseAddress.new(Network_Id, CardanoWasm.Credential.from_scripthash(
                 CardanoWasm.ScriptHash.from_hex(groupNFTHolderPKH))).to_address();
         }
         const output = CardanoWasm.TransactionOutput.new(outputAddress, outputValue);
@@ -703,7 +813,7 @@ class GroupInfoNFTHolderScript {
             for (let i = 0; i < inputArr.length; i++) {
                 inputs.add(inputArr[i]);
             }
-            console.log('before sorting:', tx.to_json());
+            // console.log('before sorting:', tx.to_json());
             const newBody = CardanoWasm.TransactionBody.new(
                 inputs, tx.body().outputs(), tx.body().fee(), tx.body().ttl()
             );
@@ -722,6 +832,12 @@ class GroupInfoNFTHolderScript {
             if (tx.body().validity_start_interval()) newBody.set_validity_start_interval(tx.body().validity_start_interval());
             if (tx.body().validity_start_interval_bignum()) newBody.set_validity_start_interval_bignum(tx.body().validity_start_interval_bignum());
             if (tx.body().withdrawals()) newBody.set_withdrawals(tx.body().withdrawals());
+
+
+            if (tx.body().current_treasury_value()) newBody.set_current_treasury_value(tx.body().current_treasury_value());
+            if (tx.body().donation()) newBody.set_donation(tx.body().donation());
+            if (tx.body().voting_procedures()) newBody.set_voting_procedures(tx.body().voting_procedures());
+            if (tx.body().voting_proposals()) newBody.set_voting_procedures(tx.body().voting_proposals());
             return CardanoWasm.Transaction.new(newBody, witnessSet);
         }
         return CardanoWasm.Transaction.new(tx.body(), witnessSet);
@@ -741,10 +857,10 @@ class AdminNFTHolderScript {
     static address(stake_cred = undefined) {
         if (stake_cred) {
             return CardanoWasm.BaseAddress.new(Network_Id
-                , CardanoWasm.StakeCredential.from_scripthash(this.script().hash())
-                , CardanoWasm.StakeCredential.from_scripthash(CardanoWasm.ScriptHash.from_hex(stake_cred))).to_address();
+                , CardanoWasm.Credential.from_scripthash(this.script().hash())
+                , CardanoWasm.Credential.from_scripthash(CardanoWasm.ScriptHash.from_hex(stake_cred))).to_address();
         } else {
-            return CardanoWasm.EnterpriseAddress.new(Network_Id, CardanoWasm.StakeCredential.from_scripthash(this.script().hash())).to_address();
+            return CardanoWasm.EnterpriseAddress.new(Network_Id, CardanoWasm.Credential.from_scripthash(this.script().hash())).to_address();
         }
     }
 
@@ -853,7 +969,7 @@ class AdminNFTHolderScript {
             // const value = CardanoWasm.Value.new(CardanoWasm.BigNum.from_str(utxoForFee.value + ''));
             const value = utils.funValue(utxoForFee.value);
             const from = CardanoWasm.Address.from_bech32(utxoForFee.address);
-            txInputBuilder.add_input(from, input, value);
+            txInputBuilder.add_regular_input(from, input, value);
         }
 
         // Step 2: add utxo for collateral fee
@@ -866,7 +982,7 @@ class AdminNFTHolderScript {
             // const value = CardanoWasm.Value.new(CardanoWasm.BigNum.from_str(utxoCollateral.value + ''));
             const value = utils.funValue(utxoCollateral.value);
             const from = CardanoWasm.Address.from_bech32(utxoCollateral.address);
-            txCollateralInputBuilder.add_input(from, input, value);
+            txCollateralInputBuilder.add_regular_input(from, input, value);
             collaterOwnerAddress = from;
         }
         txBuilder.set_collateral(txCollateralInputBuilder);
@@ -898,7 +1014,7 @@ class AdminNFTHolderScript {
         const value = utils.funValue(utxoToSpend.value);
         const scriptRefInput = CardanoWasm.TransactionInput.new(CardanoWasm.TransactionHash.from_bytes(Buffer.from(scriptRef.txHash, 'hex')), scriptRef.index);
         const witness = CardanoWasm.PlutusWitness.new_with_ref(
-            CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(GroupInfoNFTHolderScript.script().hash(), scriptRefInput, CardanoWasm.Language.new_plutus_v2())
+            CardanoWasm.PlutusScriptSource.new_ref_input(GroupInfoNFTHolderScript.script().hash(), scriptRefInput, GroupInfoNFTHolderScript.script().language_version(),GroupInfoNFTHolderScript.script().bytes().byteLength)
             , CardanoWasm.DatumSource.new_ref_input(input)
             , redeemer);
         txInputBuilder.add_plutus_script_input(witness, input, value);
@@ -1014,11 +1130,11 @@ class AdminNFTHolderScript {
 
         let adminNFTDatum;
 
-        if (addressType == CardanoWasm.StakeCredKind.Key) {
+        if (addressType == CardanoWasm.CredKind.Key) {
             const adminPkh = utils.addressToPkhOrScriptHash(utxoToSpend.address);
             txBuilder.add_required_signer(CardanoWasm.Ed25519KeyHash.from_hex(adminPkh));
             const from = CardanoWasm.Address.from_bech32(utxoToSpend.address);
-            txInputBuilder.add_input(from, input, value);
+            txInputBuilder.add_regular_input(from, input, value);
 
         } else {
             let ex_unit_mem = exUnitEVA ? exUnitEVA.memory : 5075293;//  4142333
@@ -1035,13 +1151,9 @@ class AdminNFTHolderScript {
             );
 
             const scriptRefInput = CardanoWasm.TransactionInput.new(CardanoWasm.TransactionHash.from_bytes(Buffer.from(adminNftHoldRefScript.txHash, 'hex')), adminNftHoldRefScript.index);
-            // const witness = CardanoWasm.PlutusWitness.new_with_ref(
-            //     CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(AdminNFTHolderScript.script().hash(), scriptRefInput, CardanoWasm.Language.new_plutus_v2())
-            //     , CardanoWasm.DatumSource.new_ref_input(input)
-            //     , redeemer);
 
             const witness = CardanoWasm.PlutusWitness.new_with_ref_without_datum(
-                CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(AdminNFTHolderScript.script().hash(), scriptRefInput, CardanoWasm.Language.new_plutus_v2())
+                CardanoWasm.PlutusScriptSource.new_ref_input(AdminNFTHolderScript.script().hash(), scriptRefInput, AdminNFTHolderScript.script().language_version(),AdminNFTHolderScript.script().bytes().byteLength*1)
                 , redeemer
             )
             txInputBuilder.add_plutus_script_input(witness, input, value);
@@ -1090,7 +1202,7 @@ class StoremanStackScript {
     }
 
     static address() {
-        return CardanoWasm.RewardAddress.new(Network_Id, CardanoWasm.StakeCredential.from_scripthash(this.script().hash())).to_address();
+        return CardanoWasm.RewardAddress.new(Network_Id, CardanoWasm.Credential.from_scripthash(this.script().hash())).to_address();
     }
 
     static async register(protocolParams, utxosForFee, changeAddress, signFn) {
@@ -1105,11 +1217,11 @@ class StoremanStackScript {
             // const value = CardanoWasm.Value.new(CardanoWasm.BigNum.from_str(utxoForFee.value + ''));
             const value = utils.funValue(utxoForFee.value);
             const from = CardanoWasm.Address.from_bech32(utxoForFee.address);
-            txInputBuilder.add_input(from, input, value);
+            txInputBuilder.add_regular_input(from, input, value);
         }
 
         // Step 2: add utxo for collateral fee
-        const stakeRegistration = CardanoWasm.StakeRegistration.new(CardanoWasm.StakeCredential.from_scripthash(this.script().hash()));
+        const stakeRegistration = CardanoWasm.StakeRegistration.new(CardanoWasm.Credential.from_scripthash(this.script().hash()));
         const stakeResistrationCertificate = CardanoWasm.Certificate.new_stake_registration(stakeRegistration);
         const certificates = CardanoWasm.Certificates.new();
         certificates.add(stakeResistrationCertificate);
@@ -1206,10 +1318,10 @@ class StoremanStackScript {
             );
             redeemers.add(redeemer);
 
-            const stk = CardanoWasm.StakeCredential.from_scripthash(StoremanStackScript.script().hash());
-            // const stk = CardanoWasm.StakeCredential.from_keyhash(CardanoWasm.Ed25519KeyHash.from_hex(utils.addressToPkhOrScriptHash(changeAddress)));
+            const stk = CardanoWasm.Credential.from_scripthash(StoremanStackScript.script().hash());
+            // const stk = CardanoWasm.Credential.from_keyhash(CardanoWasm.Ed25519KeyHash.from_hex(utils.addressToPkhOrScriptHash(changeAddress)));
             const stakeDelegation = CardanoWasm.StakeDelegation.new(
-                stk//CardanoWasm.StakeCredential.from_scripthash(this.script().hash())
+                stk//CardanoWasm.Credential.from_scripthash(this.script().hash())
                 , CardanoWasm.Ed25519KeyHash.from_bech32(pool));
             // console.log(stakeDelegation.to_json());
             const stakeDelegationCertificate = CardanoWasm.Certificate.new_stake_delegation(stakeDelegation);
@@ -1497,7 +1609,7 @@ class StoremanStackScript {
             );
             redeemers.add(redeemer);
 
-            const rewardAddr = CardanoWasm.RewardAddress.new(Network_Id, CardanoWasm.StakeCredential.from_scripthash(this.script().hash()));
+            const rewardAddr = CardanoWasm.RewardAddress.new(Network_Id, CardanoWasm.Credential.from_scripthash(this.script().hash()));
             withdraws.insert(rewardAddr, CardanoWasm.BigNum.from_str('' + claimAmount));
 
             const claimToAddr = CardanoWasm.Address.from_bech32(claimTo);
@@ -1789,10 +1901,10 @@ class StoremanStackScript {
             );
             redeemers.add(redeemer);
 
-            const stk = CardanoWasm.StakeCredential.from_scripthash(StoremanStackScript.script().hash());
-            // const stk = CardanoWasm.StakeCredential.from_keyhash(CardanoWasm.Ed25519KeyHash.from_hex(utils.addressToPkhOrScriptHash(changeAddress)));
+            const stk = CardanoWasm.Credential.from_scripthash(StoremanStackScript.script().hash());
+            // const stk = CardanoWasm.Credential.from_keyhash(CardanoWasm.Ed25519KeyHash.from_hex(utils.addressToPkhOrScriptHash(changeAddress)));
             const stakeDeregistration = CardanoWasm.StakeDeregistration.new(
-                stk//CardanoWasm.StakeCredential.from_scripthash(this.script().hash())
+                stk//CardanoWasm.Credential.from_scripthash(this.script().hash())
             );
             // console.log(stakeDeregistration.to_json());
             const stakeDelegationCertificate = CardanoWasm.Certificate.new_stake_deregistration(stakeDeregistration);
@@ -2027,15 +2139,15 @@ class StakeCheckScript {
     }
 
     // static address() {
-    //     return CardanoWasm.RewardAddress.new(Network_Id, CardanoWasm.StakeCredential.from_scripthash(this.script().hash())).to_address();
+    //     return CardanoWasm.RewardAddress.new(Network_Id, CardanoWasm.Credential.from_scripthash(this.script().hash())).to_address();
     // }
     static address(stake_cred = undefined) {
         if (stake_cred) {
             return CardanoWasm.BaseAddress.new(Network_Id
-                , CardanoWasm.StakeCredential.from_scripthash(this.script().hash())
-                , CardanoWasm.StakeCredential.from_scripthash(CardanoWasm.ScriptHash.from_hex(stake_cred))).to_address();
+                , CardanoWasm.Credential.from_scripthash(this.script().hash())
+                , CardanoWasm.Credential.from_scripthash(CardanoWasm.ScriptHash.from_hex(stake_cred))).to_address();
         } else {
-            return CardanoWasm.EnterpriseAddress.new(Network_Id, CardanoWasm.StakeCredential.from_scripthash(this.script().hash())).to_address();
+            return CardanoWasm.EnterpriseAddress.new(Network_Id, CardanoWasm.Credential.from_scripthash(this.script().hash())).to_address();
         }
     }
 
@@ -2068,8 +2180,14 @@ class StakeCheckScript {
             const input = CardanoWasm.TransactionInput.new(txId, utxoToSpend.index);
             const value = utils.funValue(utxoToSpend.value);
             const scriptRefInput = CardanoWasm.TransactionInput.new(CardanoWasm.TransactionHash.from_bytes(Buffer.from(stakeCheckRefScript.txHash, 'hex')), stakeCheckRefScript.index);
+
+            const buf = Buffer.from(stakeCheckRefScript.script['plutus:v2'], 'hex');
+            const cborHex = cbor.encode(buf, 'buffer');
+            const scriptTmp = CardanoWasm.PlutusScript.from_bytes_v2(cborHex);
+            const scriptSize = scriptTmp.bytes().byteLength;
+
             const witness = CardanoWasm.PlutusWitness.new_with_ref(
-                CardanoWasm.PlutusScriptSource.new_ref_input_with_lang_ver(StakeCheckScript.script().hash(), scriptRefInput, CardanoWasm.Language.new_plutus_v2())
+                CardanoWasm.PlutusScriptSource.new_ref_input(StakeCheckScript.script().hash(), scriptRefInput, scriptTmp.language_version(),scriptSize)
                 , CardanoWasm.DatumSource.new_ref_input(input)
                 , redeemer);
             txInputBuilder.add_plutus_script_input(witness, input, value);
