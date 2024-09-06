@@ -68,14 +68,3 @@ module.exports.submitTx = async function (filter) {
   const reqUrl = `${apiServer}/${'submitTxByPlutusSdk'}`;
   return (await axios.post(reqUrl, filter)).data;
 }
-
-
-this.setBaseUrl(testnetUrl);
-// this.delegationsAndRewards(['stake_test1uq2lfrauuqz5f75xqp8sl3qahspa7l3ef65nzcu3fm75m7glkzhp3']).then((response)=>{
-this.utxo(['addr_test1vqkhzqla4a97aja77dldcmfy6vgjxregxmg277g78f3kf5se9wfpy']).then((response) => {
-  console.log(response.data);
-  console.log('finished');
-}).catch(err => {
-  console.log(err);
-  console.log('over')
-})
