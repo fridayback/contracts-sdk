@@ -22,8 +22,8 @@ const newKey = CardanoWasm.PrivateKey.from_hex(kkkk);
 const newPkh = newKey.to_public().hash();
 const adminaddr = CardanoWasm.BaseAddress.new(
     CardanoWasm.NetworkIdKind.Mainnet
-    , CardanoWasm.StakeCredential.from_keyhash(newPkh)
-    , CardanoWasm.StakeCredential.from_keyhash(newPkh))
+    , CardanoWasm.Certificate.from_keyhash(newPkh)
+    , CardanoWasm.Certificate.from_keyhash(newPkh))
 
 
 // const payPrvKeyNext = '9b160ba482e38697c5631df832cbc2f5a9c41d9a588b2fa11dc7c370cf02058a';
@@ -314,6 +314,7 @@ function show() {
     console.log('TreausyCheck Addr:', contracts.TreasuryCheckScript.script().hash().to_hex(), contracts.TreasuryCheckScript.address(stakeHash).to_bech32(sdk.ADDR_PREFIX));
     console.log('MintCheck Addr:', contracts.MintCheckScript.script().hash().to_hex(), contracts.MintCheckScript.address(stakeHash).to_bech32(sdk.ADDR_PREFIX));
     console.log('AdminHolder Addr:', contractsMgr.AdminNFTHolderScript.script().hash().to_hex(), contractsMgr.AdminNFTHolderScript.address().to_bech32(sdk.ADDR_PREFIX));
+    console.log('GroupInfoNFTnHolder Addr:', contractsMgr.GroupInfoNFTHolderScript.script().hash().to_hex(), contractsMgr.GroupInfoNFTHolderScript.address().to_bech32(sdk.ADDR_PREFIX));
 }
 
 async function tryScriptRefUtxo(script) {
@@ -342,7 +343,9 @@ const newMintCheckVH = 'addr_test1xpmqvkf78d98ngyzv578gw4de9wjquuhh97087l87sna0f
 const cbor = require('cbor-sync');
 async function main() {
     // const sdk = new ContractSdk(false);
-    await sdk.init(host, 1337);
+    const mainnetUrl = "https://nodes.wandevs.org/cardano";
+    const testnetUrl = "https://nodes-testnet.wandevs.org/cardano";
+    await sdk.init(testnetUrl);
     show();
 
     // const cborHex = '84a90082825820bf0ce897ccd74318d6e7efb6ecbaaad9320b0c59bae52738d36082922e51282e01825820c7ee81fff531b71df2c20fe0b511cb2fe2f66817bda8877df108d9dc46a20482010182a300581d712cbf787c0586588393ee0a284760c25db4f139557e113d897af4322601821a0013126ca1581c53cc8f42ca118ffa3fe0f66cf82d973b73913e0ff25edb2e5e1371afa14c41646d696e4e4654436f696e01028201d8185825d8799f9f581ce401804f5a9822508cf9cee59248e0d977778e7c001ce8a7d81f50beff01ff82583901e401804f5a9822508cf9cee59248e0d977778e7c001ce8a7d81f50befddc71f25b5b469185ba09e60f78200d5be05ff4dfa1e9c7722661951b00000001c1685126021a000ca7cf0b5820c7751fab0e918176c2ab9873c609e98dd659f97c22c056be35e566836ba5d0440d818258208f7c78d1e03e4e443486ad338b6f7e2bc500c9779c2490c9ddcddb5018cd7925000e81581ce401804f5a9822508cf9cee59248e0d977778e7c001ce8a7d81f50be1082583901e401804f5a9822508cf9cee59248e0d977778e7c001ce8a7d81f50befddc71f25b5b469185ba09e60f78200d5be05ff4dfa1e9c7722661951a00332c1a111a00191f261282825820be8d471f5ec6aef8d9e1f18afceed18e314361db7998d55bbe1543f3fe00ac3000825820c7ee81fff531b71df2c20fe0b511cb2fe2f66817bda8877df108d9dc46a2048201a0f5f6';

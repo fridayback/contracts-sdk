@@ -26,8 +26,8 @@ const newKey = CardanoWasm.PrivateKey.from_hex(kkkk);
 const newPkh = newKey.to_public().hash();
 const adminaddr = CardanoWasm.BaseAddress.new(
     CardanoWasm.NetworkIdKind.Mainnet
-    , CardanoWasm.StakeCredential.from_keyhash(newPkh)
-    , CardanoWasm.StakeCredential.from_keyhash(newPkh))
+    , CardanoWasm.Certificate.from_keyhash(newPkh)
+    , CardanoWasm.Certificate.from_keyhash(newPkh))
 
 
 const payPrvKeyNext = '9b160ba482e38697c5631df832cbc2f5a9c41d9a588b2fa11dc7c370cf02058a';
