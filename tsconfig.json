@@ -3,7 +3,7 @@
     "allowJs": true,
     "declaration": true,
     "emitDeclarationOnly": true,
-    "outDir": "./",
+    "outDir": "./dist",
     "target": "es5"
   },
   "include": ["./index.js"]
