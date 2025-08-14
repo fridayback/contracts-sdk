@@ -2,7 +2,7 @@ const CardanoWasm = require('@emurgo/cardano-serialization-lib-nodejs');
 const jsSHA = require("jssha");
 const utils = require('./utils');
 const BigNumber = require('bignumber.js');
-
+const cbor = require('cbor-sync');
 const plutus = require('./plutus');
 
 
@@ -1148,8 +1148,13 @@ class AdminNFTHolderScript {
 
             const scriptRefInput = CardanoWasm.TransactionInput.new(CardanoWasm.TransactionHash.from_bytes(Buffer.from(adminNftHoldRefScript.txHash, 'hex')), adminNftHoldRefScript.index);
 
+            const buf2 = Buffer.from(adminNftHoldRefScript.script['plutus:v2'], 'hex');
+            const cborHex2 = cbor.encode(buf2, 'buffer');
+            const scriptTmp = CardanoWasm.PlutusScript.from_bytes_v2(cborHex2);
+            const scriptSize = scriptTmp.bytes().byteLength;
+
             const witness = CardanoWasm.PlutusWitness.new_with_ref_without_datum(
-                CardanoWasm.PlutusScriptSource.new_ref_input(AdminNFTHolderScript.script().hash(), scriptRefInput, AdminNFTHolderScript.script().language_version(),AdminNFTHolderScript.script().bytes().byteLength*1)
+                CardanoWasm.PlutusScriptSource.new_ref_input(scriptTmp.hash(), scriptRefInput, scriptTmp.language_version(),scriptSize)
                 , redeemer
             )
             txInputBuilder.add_plutus_script_input(witness, input, value);

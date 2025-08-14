@@ -213,7 +213,7 @@ module.exports.init_ogmios = async function (hostServer = { host: '127.0.0.1', p
     txSubmitclient = await createTxSubmissionClient(context);
     query = await createStateQueryClient(context);
     const blockHeight = await query.blockHeight();
-    console.log(blockHeight);
+    // console.log(blockHeight);
     // const ss = await this.getUtxo('addr_test1qz6twkzgss75sk379u0e27phvwhmtqqfuhl5gnx7rh7nux2xg4uwrhx9t58far8hp3a06hfdfzlsxgfrzqv5ryc78e4s4dwh26')
     // console.log(blockHeight);
     // // context.socket.close()
@@ -400,9 +400,9 @@ module.exports.fixTxExuintByEvaluate = async function (protocolParams, txRaw, co
     ).checked_add(CardanoWasm.BigNum.from_str('' + protocolParams.minFeeConstant));
 
     const total_fee = plutusCost.checked_add(txfeeWithoutPlutus);
-    console.log('txfeeWithoutPlutus=', txfeeWithoutPlutus.to_str());
-    console.log('plutusCost=', plutusCost.to_str());
-    console.log('total_fee=', total_fee.to_str());
+    // console.log('txfeeWithoutPlutus=', txfeeWithoutPlutus.to_str());
+    // console.log('plutusCost=', plutusCost.to_str());
+    // console.log('total_fee=', total_fee.to_str());
 
     const newBody = CardanoWasm.TransactionBody.new(tx.body().inputs(), tx.body().outputs(), total_fee, tx.body().ttl());
     if (tx.body().auxiliary_data_hash()) newBody.set_auxiliary_data_hash(tx.body().auxiliary_data_hash());

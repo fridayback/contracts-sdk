@@ -54,6 +54,7 @@ module.exports.getParamProtocol = async function (via = 'ogmios') {
 module.exports.getScriptRefByScriptHash = async function (scriptRefOwnerAddr, scriptHash) {
     let refUtxo = await this.getUtxo(scriptRefOwnerAddr);
     const ref = refUtxo.find(o => {
+        if(!o.script || !o.script['plutus:v2']) return false;
         const buf = Buffer.from(o.script['plutus:v2'], 'hex');
         const cborHex = cbor.encode(buf, 'buffer');
 
@@ -333,9 +334,9 @@ module.exports.fixTxExuintByEvaluate = async function (protocolParams, txRaw, co
     ).checked_add(CardanoWasm.BigNum.from_str('' + protocolParams.minFeeConstant));
 
     const total_fee = plutusCost.checked_add(txfeeWithoutPlutus);
-    console.log('txfeeWithoutPlutus=', txfeeWithoutPlutus.to_str());
-    console.log('plutusCost=', plutusCost.to_str());
-    console.log('total_fee=', total_fee.to_str());
+    // console.log('txfeeWithoutPlutus=', txfeeWithoutPlutus.to_str());
+    // console.log('plutusCost=', plutusCost.to_str());
+    // console.log('total_fee=', total_fee.to_str());
 
     const newBody = CardanoWasm.TransactionBody.new(tx.body().inputs(), tx.body().outputs(), total_fee, tx.body().ttl());
     if (tx.body().auxiliary_data_hash()) newBody.set_auxiliary_data_hash(tx.body().auxiliary_data_hash());

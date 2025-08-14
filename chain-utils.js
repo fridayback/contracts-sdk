@@ -1,3 +1,11 @@
+/*
+ * @Author: liulin blue-sky-dl5@163.com
+ * @Date: 2025-02-04 10:49:33
+ * @LastEditors: liulin blue-sky-dl5@163.com
+ * @LastEditTime: 2025-08-14 11:27:27
+ * @FilePath: /contracts-sdk/chain-utils.js
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
 const axios = require('axios');
 
 
@@ -61,7 +69,13 @@ module.exports.chainTip = async function () {
 
 module.exports.evaluateTx = async function (filter) {
   const reqUrl = `${apiServer}/${'evaluateTxByPlutusSdk'}`;
-  return (await axios.post(reqUrl, filter)).data;
+  // const reqUrl = `${apiServer}/${'evaluateTx'}`;
+  console.log(filter);
+  let ret =  (await axios.post(reqUrl, filter)).data;
+  Object.keys(ret).forEach((key) => {
+    if (ret[key].cpu) ret[key].steps = ret[key].cpu;
+  })
+  return ret;
 }
 
 module.exports.submitTx = async function (filter) {
@@ -73,8 +87,8 @@ module.exports.submitTx = async function (filter) {
 this.setBaseUrl(testnetUrl);
 // this.delegationsAndRewards(['stake_test1uq2lfrauuqz5f75xqp8sl3qahspa7l3ef65nzcu3fm75m7glkzhp3']).then((response)=>{
 this.utxo(['addr_test1vqkhzqla4a97aja77dldcmfy6vgjxregxmg277g78f3kf5se9wfpy']).then((response) => {
-  console.log(response.data);
-  console.log('finished');
+  // console.log(response.data);
+  // console.log('finished');
 }).catch(err => {
   console.log(err);
   console.log('over')

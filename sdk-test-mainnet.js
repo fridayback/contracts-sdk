@@ -1,6 +1,6 @@
 const ContractSdk = require('./sdk');
 const CardanoWasm = require('@emurgo/cardano-serialization-lib-nodejs');
-const ogmiosUtils = require('./ogmios-utils');
+const ogmiosUtils = require('./ogmios-utils2');
 const contractsMgr = require('./contracts-mgr');
 const contracts = require('./contracts')
 const utils = require('./utils')
@@ -26,8 +26,8 @@ const newKey = CardanoWasm.PrivateKey.from_hex(kkkk);
 const newPkh = newKey.to_public().hash();
 const adminaddr = CardanoWasm.BaseAddress.new(
     CardanoWasm.NetworkIdKind.Mainnet
-    , CardanoWasm.Certificate.from_keyhash(newPkh)
-    , CardanoWasm.Certificate.from_keyhash(newPkh))
+    , CardanoWasm.Credential.from_keyhash(newPkh)
+    , CardanoWasm.Credential.from_keyhash(newPkh))
 
 
 const payPrvKeyNext = '9b160ba482e38697c5631df832cbc2f5a9c41d9a588b2fa11dc7c370cf02058a';
@@ -52,12 +52,20 @@ const sdk = new ContractSdk(true);
 
 const signatories = [
     admin,
-    adminNext
+    adminNext,
+    'addr_test1qqzvl5hsla39l8z56gfv0586mdpx8dxp38xdjua4wrcarlgyelf0plmzt7w9f5sjclg04k6zvw6vrzwvm9em2u83687sneen8a'
 ]
 
 const mustSignBy = [
-    admin//, adminNext
-];
+    "e401804f5a9822508cf9cee59248e0d977778e7c001ce8a7d81f50be"
+    ,"fd51889aa0361c0e602796a7aa571629f7a972b2fc7945d424e6ec21"
+    ,"1c4e9bc39406993cca989710d28a3652ea98a494885c24a2ab2f9dac"].map(a =>{
+        const payment = CardanoWasm.Credential.from_keyhash(CardanoWasm.Ed25519KeyHash.from_hex(a));
+        return CardanoWasm.EnterpriseAddress.new(CardanoWasm.NetworkIdKind.Mainnet, payment).to_address().to_bech32();
+    })
+// const mustSignBy = [
+//     admin//, adminNext
+// ];
 
 let input = {
     "function": "updateGroupNFT",
@@ -90,6 +98,17 @@ async function getUtxoOfAmount(amount) {
         return (Object.keys(o.value.assets).length <= 0) && (o.value.coins * 1 == amount * 1)
     });
     return utxos;
+}
+
+async function makeUtxoOfAmount(amount) {
+    let utxosForFee = await getUtxoForFee();
+
+    const signedTx = await utils.transfer(protocolParamsGlobal, utxosForFee, admin, { coins: amount }, admin, undefined, undefined, signFn);
+    // console.log(signedTx.to_json());
+    const txHash = await ogmiosUtils.submitTx(signedTx);
+    const o = await ogmiosUtils.waitTxConfirmed(admin, txHash);
+
+    return o;//await getUtxoOfAmount(amount);
 }
 
 async function getUtxoForFee() {
@@ -306,11 +325,22 @@ console.log(aa.to_hex());
 //90d4f3622bcdcd8898a6173a80536e1b2edeb2a07f46696d855821845e179bf5
 const stakeAddr = 'stake_test17p8g82t994mpvlvj3xcephhn2fmtasnzlvxdrr92fgyrt4gw25zwy';
 
-function show() {
+async function show() {
     const stakeHash = contractsMgr.StoremanStackScript.script().hash().to_hex();
+    console.log('StoremanStackScript Addr:', contractsMgr.StoremanStackScript.script().hash().to_hex(), contractsMgr.StoremanStackScript.address(stakeHash).to_bech32(sdk.ADDR_PREFIX));
+    console.log('AdminNFTHolderScript Addr:', contractsMgr.AdminNFTHolderScript.script().hash().to_hex(), contractsMgr.AdminNFTHolderScript.address().to_bech32(sdk.ADDR_PREFIX));
+    const adminInfoUtxo = await sdk.getAdminNft();
+    const adminInfo= contractsMgr.AdminNFTHolderScript.getSignatoriesInfoFromDatum(adminInfoUtxo.datum);
+    console.log('AdminInfo:',JSON.stringify(adminInfo));
+    console.log('GroupInfoNFTHolderScript Addr:', contractsMgr.GroupInfoNFTHolderScript.script().hash().to_hex(), contractsMgr.GroupInfoNFTHolderScript.address().to_bech32(sdk.ADDR_PREFIX));
+    const groupInfoUtxo = await sdk.getGroupInfoNft();
+    const groupInfo= contractsMgr.GroupNFT.groupInfoFromDatum(groupInfoUtxo.datum);
+    console.log('GroupInfo:',JSON.stringify(groupInfo));
+    console.log('Treasury Addr:', contracts.TreasuryScript.script().hash().to_hex(), contracts.TreasuryScript.address(stakeHash).to_bech32(sdk.ADDR_PREFIX));
     console.log('TreausyCheck Addr:', contracts.TreasuryCheckScript.script().hash().to_hex(), contracts.TreasuryCheckScript.address(stakeHash).to_bech32(sdk.ADDR_PREFIX));
+    console.log('MappingToken policy:',contracts.MappingTokenScript.policy_id());
     console.log('MintCheck Addr:', contracts.MintCheckScript.script().hash().to_hex(), contracts.MintCheckScript.address(stakeHash).to_bech32(sdk.ADDR_PREFIX));
-    console.log('AdminHolder Addr:', contractsMgr.AdminNFTHolderScript.script().hash().to_hex(), contractsMgr.AdminNFTHolderScript.address().to_bech32(sdk.ADDR_PREFIX));
+    
 }
 
 async function tryScriptRefUtxo(script) {
@@ -339,8 +369,11 @@ const newMintCheckVH = 'addr_test1xpmqvkf78d98ngyzv578gw4de9wjquuhh97087l87sna0f
 const cbor = require('cbor-sync');
 async function main() {
     // const sdk = new ContractSdk(false);
-    await sdk.init(host, 1337,true);
-    show();
+    // await sdk.init(host, 1337,true);
+    const mainnetUrl = "https://nodes.wandevs.org/cardano";
+    const testnetUrl = "https://nodes-testnet.wandevs.org/cardano";
+    await sdk.init(mainnetUrl);
+    // await show();
 
     const cborHex = '84a90082825820bf0ce897ccd74318d6e7efb6ecbaaad9320b0c59bae52738d36082922e51282e01825820c7ee81fff531b71df2c20fe0b511cb2fe2f66817bda8877df108d9dc46a20482010182a300581d712cbf787c0586588393ee0a284760c25db4f139557e113d897af4322601821a0013126ca1581c53cc8f42ca118ffa3fe0f66cf82d973b73913e0ff25edb2e5e1371afa14c41646d696e4e4654436f696e01028201d8185825d8799f9f581ce401804f5a9822508cf9cee59248e0d977778e7c001ce8a7d81f50beff01ff82583901e401804f5a9822508cf9cee59248e0d977778e7c001ce8a7d81f50befddc71f25b5b469185ba09e60f78200d5be05ff4dfa1e9c7722661951b00000001c1685126021a000ca7cf0b5820c7751fab0e918176c2ab9873c609e98dd659f97c22c056be35e566836ba5d0440d818258208f7c78d1e03e4e443486ad338b6f7e2bc500c9779c2490c9ddcddb5018cd7925000e81581ce401804f5a9822508cf9cee59248e0d977778e7c001ce8a7d81f50be1082583901e401804f5a9822508cf9cee59248e0d977778e7c001ce8a7d81f50befddc71f25b5b469185ba09e60f78200d5be05ff4dfa1e9c7722661951a00332c1a111a00191f261282825820be8d471f5ec6aef8d9e1f18afceed18e314361db7998d55bbe1543f3fe00ac3000825820c7ee81fff531b71df2c20fe0b511cb2fe2f66817bda8877df108d9dc46a2048201a0f5f6';
     const ss = CardanoWasm.Transaction.from_hex(cborHex)
@@ -365,14 +398,14 @@ async function main() {
     // const treasuryCheckRef = await tryScriptRefUtxo(contracts.TreasuryCheckScript.script());
     // const mintCheckRef = await tryScriptRefUtxo(contracts.MintCheckScript.script());
     {
-        // const utxosForFee = await getUtxoForFee();
-        // let adminInfo = await getAdminInfo();
-        // console.log('before setAdmin:', JSON.stringify(adminInfo));
-        // let signedTx = await sdk.setTreasuryCheckVH(newTreasyCheckVH, mustSignBy, utxosForFee, [collateralUtxo], admin);
-        // console.log('--%%%%%%%%%%%%%1-------\n', signedTx.to_json());
-        // const exUnit = await finalTxEvaluate(signedTx);
-        // signedTx = await sdk.setTreasuryCheckVH(newTreasyCheckVH, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
-        // console.log('--%%%%%%%%%%%%%2-------\n', signedTx.to_json());
+        const utxosForFee = await getUtxoForFee();
+        let adminInfo = await getAdminInfo();
+        console.log('before setAdmin:', JSON.stringify(adminInfo));
+        let signedTx = await sdk.setTreasuryCheckVH(newTreasyCheckVH, mustSignBy, utxosForFee, [collateralUtxo], admin);
+        console.log('--%%%%%%%%%%%%%1-------\n', signedTx.to_json());
+        const exUnit = await finalTxEvaluate(signedTx);
+        signedTx = await sdk.setTreasuryCheckVH(newTreasyCheckVH, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
+        console.log('--%%%%%%%%%%%%%2-------\n', signedTx.to_json());
         // let o = await submitAndWaitConfirmed(signedTx);
         // adminInfo = await getAdminInfo();
         // console.log('after setAdmin:', JSON.stringify(adminInfo));
@@ -403,8 +436,8 @@ async function main() {
         signedTx = await sdk.setAdmin(signatories, 2, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
         console.log('--%%%%%%%%%%%%%2-------\n', signedTx.to_json());
         // let o = await submitAndWaitConfirmed(signedTx);
-        adminInfo = await getAdminInfo();
-        console.log('after setAdmin:', JSON.stringify(adminInfo));
+        // adminInfo = await getAdminInfo();
+        // console.log('after setAdmin:', JSON.stringify(adminInfo));
     }
 
     {

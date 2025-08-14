@@ -11,6 +11,9 @@ const ACTION_DELEGATE = 0;
 const ACTION_CLAIM = 1;
 const ACTION_DEREGISTER = 2;
 
+const scriptRefHolderMainnet = 'addr1qys3nr0s5wqz3gw2n9satl279ntzha2z92v4ewrknr234hzx8ugllqwa07adyqwz23j797tha446p0exqa8jjypyqzasq73gym';
+const scriptRefHolderTestnet = 'addr_test1vq73yuplt9c5zmgw4ve7qhu49yxllw7q97h4smwvfgst32qrkwupd';//addr_test1qphjkuwfcyemz05dug4jjkfljanzn70lvrcmfk67j25dydzuhxsuxygu3zrzavc6a6m58yj7zgtuen34dfa9mlz6d00qca5qaz;
+
 class ContractSdk {
 
     constructor(isMainnet = false, scriptRefOwnerAddr = undefined, conViaWs = false) {
@@ -18,8 +21,7 @@ class ContractSdk {
         this.ADDR_PREFIX = isMainnet ? 'addr' : 'addr_test';
         if (!scriptRefOwnerAddr) {
             this.scriptRefOwnerAddr =
-                isMainnet ? 'addr1qys3nr0s5wqz3gw2n9satl279ntzha2z92v4ewrknr234hzx8ugllqwa07adyqwz23j797tha446p0exqa8jjypyqzasq73gym'
-                    : 'addr_test1vq73yuplt9c5zmgw4ve7qhu49yxllw7q97h4smwvfgst32qrkwupd';
+                isMainnet ? scriptRefHolderMainnet : scriptRefHolderTestnet;
         } else {
             this.scriptRefOwnerAddr = scriptRefOwnerAddr;
         }
@@ -51,7 +53,10 @@ class ContractSdk {
         if (this.allScriptRefUtxo && this.allScriptRefUtxo.length <= 0) {
             this.allScriptRefUtxo = await ogmiosUtils.getUtxo(this.scriptRefOwnerAddr);
         }
-        const ref = this.allScriptRefUtxo.find(o => script.to_hex().indexOf(o.script['plutus:v2']) >= 0);
+        const ref = this.allScriptRefUtxo.find(o => {
+            if(!o.script || !o.script['plutus:v2']) return false;
+            return script.to_hex().indexOf(o.script['plutus:v2']) >= 0
+        });
         return ref;
     }
 
@@ -345,6 +350,7 @@ class ContractSdk {
 
         return signedTx;
     }
+
 
     async mintMintCheckToken(amount, mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
         const groupInfoUtxo = await this.getGroupInfoNft();
