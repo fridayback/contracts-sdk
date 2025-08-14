@@ -5,6 +5,7 @@ let ogmiosUtils;
 
 const contracts = require('./contracts');
 const contractsMgr = require('./contracts-mgr');
+const nftContracts = require('./nft-contract');
 
 
 const ACTION_DELEGATE = 0;
@@ -47,6 +48,11 @@ class ContractSdk {
         this.treasuryChecTokenscriptRefUtxo = await this.getScriptRefUtxo(contracts.TreasuryCheckTokenScript.script());
         this.treasuryCheckScriptRefUtxo = await this.getScriptRefUtxo(contracts.TreasuryCheckScript.script());
         this.mintCheckScriptRefUtxo = await this.getScriptRefUtxo(contracts.MintCheckScript.script());
+
+        this.nftTreasuryChecTokenscriptRefUtxo = await this.getScriptRefUtxo(nftContracts.NFTTreasuryCheckTokenScript.script());
+        this.nftTreasuryCheckScriptRefUtxo = await this.getScriptRefUtxo(nftContracts.NFTTreasuryCheckScript.script());
+        this.nftMintChecTokenscriptRefUtxo = await this.getScriptRefUtxo(nftContracts.NFTMintCheckTokenScript.script());
+        this.nftMintCheckScriptRefUtxo = await this.getScriptRefUtxo(nftContracts.NFTMintCheckScript.script());
     }
 
     async getScriptRefUtxo(script) {
@@ -129,6 +135,31 @@ class ContractSdk {
                     protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
                     , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
                     , newMintCheckVk, changeAddr, undefined, signFn, exUnitTx);
+                break;
+            }
+            case contractsMgr.GroupNFT.NFTRefHolderVH: {
+                const newNftRefHolder = utils.addressToPkhOrScriptHash(setParam);
+
+                signedTx = await contractsMgr.GroupInfoNFTHolderScript.setOracleWorker(
+                    protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
+                    , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
+                    , newNftRefHolder, changeAddr, undefined, signFn, exUnitTx);
+                break;
+            }
+            case contractsMgr.GroupNFT.NFTTreasuryCheckVH: {
+                const newNFTTreasuryCheckVk = utils.addressToPkhOrScriptHash(setParam);
+                signedTx = await contractsMgr.GroupInfoNFTHolderScript.setNFTTreasuryCheckVH(
+                    protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
+                    , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
+                    , newNFTTreasuryCheckVk, changeAddr, undefined, signFn, exUnitTx);
+                break;
+            }
+            case contractsMgr.GroupNFT.NFTMintCheckVH: {
+                const newNFTMintCheckVk = utils.addressToPkhOrScriptHash(setParam);
+                signedTx = await contractsMgr.GroupInfoNFTHolderScript.setNFTMintCheckVH(
+                    protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
+                    , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
+                    , newNFTMintCheckVk, changeAddr, undefined, signFn, exUnitTx);
                 break;
             }
             // case contractsMgr.GroupNFT.StkVh: {
@@ -256,6 +287,10 @@ class ContractSdk {
         return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.BalanceWorker, newBalanceWorker, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
     }
 
+    async setNftRefHolder(newNftRefHolder, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.NFTRefHolderVH, newNftRefHolder, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
+    }
+
     async addSignature(tx, signFn = undefined) {
         return contractsMgr.AdminNFTHolderScript.addSignature(tx, signFn);
     }
@@ -376,6 +411,54 @@ class ContractSdk {
         return signedTx;
     }
 
+    async mintNFTTreasuryCheckToken(amount, mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        const groupInfoUtxo = await this.getGroupInfoNft();
+        const groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(groupInfoUtxo.datum);
+        const adminNftUtxo = await this.getAdminNft();
+        const protocolParamsGlobal = await ogmiosUtils.getParamProtocol();
+
+        let mustSignBy = [];
+        for (let i = 0; i < mustSignByAddrs.length; i++) {
+            const addr = mustSignByAddrs[i];
+            if (utils.addressType(addr) == CardanoWasm.CredKind.Script) {
+                throw 'not supports script address'
+            }
+
+            mustSignBy.push(utils.addressToPkhOrScriptHash(addr));
+        }
+
+        const mintTo = nftContracts.NFTTreasuryCheckScript.address(groupInfoParams[contractsMgr.GroupNFT.StkVh]).to_bech32(this.ADDR_PREFIX);;
+
+        const signedTx = await nftContracts.NFTTreasuryCheckTokenScript.mint(protocolParamsGlobal, utxosForFee, utxoForCollaterals, this.nftTreasuryChecTokenscriptRefUtxo
+            , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }, changeAddr, amount, mintTo, signFn, exUnitTx);
+
+        return signedTx;
+    }
+
+    async mintNFTMintCheckToken(amount, mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        const groupInfoUtxo = await this.getGroupInfoNft();
+        const groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(groupInfoUtxo.datum);
+        const adminNftUtxo = await this.getAdminNft();
+        const protocolParamsGlobal = await ogmiosUtils.getParamProtocol();
+
+        let mustSignBy = [];
+        for (let i = 0; i < mustSignByAddrs.length; i++) {
+            const addr = mustSignByAddrs[i];
+            if (utils.addressType(addr) == CardanoWasm.CredKind.Script) {
+                throw 'not supports script address'
+            }
+
+            mustSignBy.push(utils.addressToPkhOrScriptHash(addr));
+        }
+
+        const mintTo = nftContracts.NFTMintCheckScript.address(groupInfoParams[contractsMgr.GroupNFT.StkVh]).to_bech32(this.ADDR_PREFIX);
+
+        const signedTx = await nftContracts.NFTMintCheckTokenScript.mint(protocolParamsGlobal, utxosForFee, utxoForCollaterals, this.mintChecTokenscriptRefUtxo
+            , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }, changeAddr, amount, mintTo, signFn, exUnitTx);
+
+        return signedTx;
+    }
+
     async burnTreasuryCheckTokenWithHolder(amount, holder, mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
         const groupInfoUtxo = await this.getGroupInfoNft();
         const groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(groupInfoUtxo.datum);
@@ -431,6 +514,68 @@ class ContractSdk {
         }
 
         const signedTx = await contracts.MintCheckScript.burn(protocolParamsGlobal, utxosForFee
+            , utxoForCollaterals, burnUtxos, this.mintCheckScriptRefUtxo, this.mintChecTokenscriptRefUtxo
+            , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }
+            , changeAddr, signFn, exUnitTx);
+
+        return signedTx;
+    }
+
+    async burnNFTTreasuryCheckTokenWithHolder(amount, holder, mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        const groupInfoUtxo = await this.getGroupInfoNft();
+        const groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(groupInfoUtxo.datum);
+        const adminNftUtxo = await this.getAdminNft();
+        const protocolParamsGlobal = await ogmiosUtils.getParamProtocol();
+
+        const trearyCheckAddr = holder;//contracts.TreasuryCheckScript.address(groupInfoParams[contractsMgr.GroupNFT.StkVh]).to_bech32(this.ADDR_PREFIX);
+        let burnUtxos = await ogmiosUtils.getUtxo(trearyCheckAddr);
+        if (amount > burnUtxos.length) {
+            throw `too many utxos to be burnd: max NFTTreasuryCheck utxos is ${burnUtxos.length}`
+        }
+        burnUtxos = burnUtxos.slice(0, amount);
+
+        let mustSignBy = [];
+        for (let i = 0; i < mustSignByAddrs.length; i++) {
+            const addr = mustSignByAddrs[i];
+            if (utils.addressType(addr) == CardanoWasm.CredKind.Script) {
+                throw 'not supports script address'
+            }
+
+            mustSignBy.push(utils.addressToPkhOrScriptHash(addr));
+        }
+
+        const signedTx = await nftContracts.NFTTreasuryCheckScript.burn(protocolParamsGlobal, utxosForFee
+            , utxoForCollaterals, burnUtxos, this.treasuryCheckScriptRefUtxo, this.treasuryChecTokenscriptRefUtxo
+            , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }
+            , changeAddr, signFn, exUnitTx);
+
+        return signedTx;
+    }
+
+    async burnNFTMintCheckTokenWithHolder(amount, holder, mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        const groupInfoUtxo = await this.getGroupInfoNft();
+        const groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(groupInfoUtxo.datum);
+        const adminNftUtxo = await this.getAdminNft();
+        const protocolParamsGlobal = await ogmiosUtils.getParamProtocol();
+
+        const trearyCheckAddr = holder;//contracts.MintCheckScript.address(groupInfoParams[contractsMgr.GroupNFT.StkVh]).to_bech32(this.ADDR_PREFIX);
+        let burnUtxos = await ogmiosUtils.getUtxo(trearyCheckAddr);
+        if (amount > burnUtxos.length) {
+            throw `too many utxos to be burnd: max NFTMintCheck utxos is ${burnUtxos.length}`
+        }
+        burnUtxos = burnUtxos.slice(0, amount);
+
+        let mustSignBy = [];
+        for (let i = 0; i < mustSignByAddrs.length; i++) {
+            const addr = mustSignByAddrs[i];
+            if (utils.addressType(addr) == CardanoWasm.CredKind.Script) {
+                throw 'not supports script address'
+            }
+
+            mustSignBy.push(utils.addressToPkhOrScriptHash(addr));
+        }
+
+        const signedTx = await nftContracts.NFTMintCheckScript.burn(protocolParamsGlobal, utxosForFee
             , utxoForCollaterals, burnUtxos, this.mintCheckScriptRefUtxo, this.mintChecTokenscriptRefUtxo
             , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }
             , changeAddr, signFn, exUnitTx);

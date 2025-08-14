@@ -15,6 +15,15 @@ const adminNftHolderPlutus = require('./adminNFT-holder.json');
 const storemanStakePlutus = require('./storeman-stake.json');
 const stakeCheckPlutus = require('./stake-check.json');
 
+//////////////nft /////////////////////////////
+const nftTreasuryPlutus = require('./nft-treasury.json');
+const nftTreasuryCheckPlutus = require('./nft-treasury-check.json');
+const nftMappingTokenPlutus = require('./nft-mapping-token.json');
+const nftMintCheckPlutus = require('./nft-mint-check.json');
+const nftMintCheckTokenPlutus = require('./nft-mint-check-token.json');
+const nftTreasuryCheckTokenPlutus = require('./nft-treasury-check-token.json');
+const nftRefHoderPlutus = require('./nft-ref-holder.json')
+
 module.exports = {
     groupInfoTokenPlutus
     , groupInfoTokenHolderPlutus
@@ -28,4 +37,12 @@ module.exports = {
     , adminNftHolderPlutus
     , storemanStakePlutus
     , stakeCheckPlutus
+    //------------- NFT ------------
+    , nftTreasuryPlutus
+    , nftTreasuryCheckPlutus
+    , nftMappingTokenPlutus
+    , nftMintCheckPlutus
+    , nftMintCheckTokenPlutus
+    , nftTreasuryCheckTokenPlutus
+    , nftRefHoderPlutus
 }

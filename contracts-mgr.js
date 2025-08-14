@@ -166,6 +166,10 @@ class GroupNFT {
     static MintCheckVH = 6;
     static StkVh = 7;
     static StkCheckVh = 8;
+    static NFTRefHolderVH = 9;
+    static NFTTreasuryCheckVH = 10;
+    static NFTMintCheckVH = 11;
+    // static NFTRefWorker = 12;
 
     static script() {
         return groupNFTScript;
@@ -194,6 +198,10 @@ class GroupNFT {
         params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[GroupNFT.MintCheckVH + ''], 'hex')));
         params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[GroupNFT.StkVh + ''], 'hex')));
         params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[GroupNFT.StkCheckVh + ''], 'hex')));
+        // NFTRefHolderVH | NFTTreasuryCheckVH | NFTMintCheckVH
+        params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[GroupNFT.NFTRefHolderVH + ''], 'hex')));
+        params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[GroupNFT.NFTTreasuryCheckVH + ''], 'hex')));
+        params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[GroupNFT.NFTMintCheckVH + ''], 'hex')));
 
         ls.add(CardanoWasm.PlutusData.new_list(params));
 
@@ -606,6 +614,54 @@ class GroupInfoNFTHolderScript {
         return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, params, changeAddress, ttl, signFn, GroupNFT.StkCheckVh, adminInfo, exUnitTx);
 
     }
+
+    static async setNFTRefHolderVH(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, adminInfo, newNFTRefHolderVH, changeAddress, ttl, signFn, exUnitTx) {
+        // const datum = CardanoWasm.PlutusData.from_hex(utxosToSpend[0].datum);
+        let params = GroupNFT.groupInfoFromDatum(utxoToSpend.datum);
+        if (params.length == GroupNFT.NFTRefHolderVH) {
+            params.push(newNFTRefHolderVH);
+        }
+        params[GroupNFT.NFTRefHolderVH] = newNFTRefHolderVH;
+
+        return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, params, changeAddress, ttl, signFn, GroupNFT.NFTRefHolderVH, adminInfo, exUnitTx);
+
+    }
+
+    static async setNFTTreasuryCheckVH(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, adminInfo, newParam, changeAddress, ttl, signFn, exUnitTx) {
+        // const datum = CardanoWasm.PlutusData.from_hex(utxosToSpend[0].datum);
+        let params = GroupNFT.groupInfoFromDatum(utxoToSpend.datum);
+        if (params.length == GroupNFT.NFTTreasuryCheckVH) {
+            params.push(newParam);
+        }
+        params[GroupNFT.NFTTreasuryCheckVH] = newParam;
+
+        return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, params, changeAddress, ttl, signFn, GroupNFT.NFTTreasuryCheckVH, adminInfo, exUnitTx);
+
+    }
+
+    static async setNFTMintCheckVH(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, adminInfo, newParam, changeAddress, ttl, signFn, exUnitTx) {
+        // const datum = CardanoWasm.PlutusData.from_hex(utxosToSpend[0].datum);
+        let params = GroupNFT.groupInfoFromDatum(utxoToSpend.datum);
+        if (params.length == GroupNFT.NFTMintCheckVH) {
+            params.push(newParam);
+        }
+        params[GroupNFT.NFTMintCheckVH] = newParam;
+
+        return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, params, changeAddress, ttl, signFn, GroupNFT.NFTMintCheckVH, adminInfo, exUnitTx);
+
+    }
+
+    // static async setNFTRefWorker(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, adminInfo, newParam, changeAddress, ttl, signFn, exUnitTx) {
+    //     // const datum = CardanoWasm.PlutusData.from_hex(utxosToSpend[0].datum);
+    //     let params = GroupNFT.groupInfoFromDatum(utxoToSpend.datum);
+    //     if (params.length == GroupNFT.NFTRefWorker) {
+    //         params.push(newParam);
+    //     }
+    //     params[GroupNFT.NFTRefWorker] = newParam;
+
+    //     return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, params, changeAddress, ttl, signFn, GroupNFT.NFTRefWorker, adminInfo, exUnitTx);
+
+    // }
 
     static async setOracleWorker(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, adminInfo, newOracleWorker, changeAddress, ttl, signFn, exUnitTx) {
         // const datum = CardanoWasm.PlutusData.from_hex(utxosToSpend[0].datum);
