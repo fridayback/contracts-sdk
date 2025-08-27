@@ -407,7 +407,7 @@ class NFTTreasuryScript {
         // console.log('script data hash:', body.script_data_hash().to_hex())
         // console.log('real Fee:', tx.body().fee().to_str());
         const draftTx = CardanoWasm.Transaction.new(tx.body(), witnessSet, tx.auxiliary_data());
-        console.log('======', draftTx.to_json());
+        // console.log('======', draftTx.to_json());
         return utils.fixTxExuintByEvaluate(protocolParams, draftTx.to_hex(),totalScriptSize, evaluateFn, signFn);
     }
 

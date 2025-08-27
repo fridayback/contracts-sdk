@@ -62,7 +62,7 @@ module.exports.chainTip = async function () {
 module.exports.evaluateTx = async function (filter) {
   const reqUrl = `${apiServer}/${'evaluateTxByPlutusSdk'}`;
   // const reqUrl = `${apiServer}/${'evaluateTx'}`;
-  console.log(filter);
+ // console.log(filter);
   let ret =  (await axios.post(reqUrl, filter)).data;
   Object.keys(ret).forEach((key) => {
     if (ret[key].cpu) ret[key].steps = ret[key].cpu;
