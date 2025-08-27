@@ -44,14 +44,14 @@ class ContractSdk {
         this.adminNftHoldRefScript = await this.getScriptRefUtxo(contractsMgr.AdminNFTHolderScript.script());
         this.stakeScriptRefUtxo = await this.getScriptRefUtxo(contractsMgr.StoremanStackScript.script());
         this.stakeCheckScriptRefUtxo = await this.getScriptRefUtxo(contractsMgr.StakeCheckScript.script());
-        this.mintChecTokenscriptRefUtxo = await this.getScriptRefUtxo(contracts.MintCheckTokenScript.script());
-        this.treasuryChecTokenscriptRefUtxo = await this.getScriptRefUtxo(contracts.TreasuryCheckTokenScript.script());
+        this.mintCheckTokenscriptRefUtxo = await this.getScriptRefUtxo(contracts.MintCheckTokenScript.script());
+        this.treasuryCheckTokenscriptRefUtxo = await this.getScriptRefUtxo(contracts.TreasuryCheckTokenScript.script());
         this.treasuryCheckScriptRefUtxo = await this.getScriptRefUtxo(contracts.TreasuryCheckScript.script());
         this.mintCheckScriptRefUtxo = await this.getScriptRefUtxo(contracts.MintCheckScript.script());
 
-        this.nftTreasuryChecTokenscriptRefUtxo = await this.getScriptRefUtxo(nftContracts.NFTTreasuryCheckTokenScript.script());
+        this.nftTreasuryCheckTokenscriptRefUtxo = await this.getScriptRefUtxo(nftContracts.NFTTreasuryCheckTokenScript.script());
         this.nftTreasuryCheckScriptRefUtxo = await this.getScriptRefUtxo(nftContracts.NFTTreasuryCheckScript.script());
-        this.nftMintChecTokenscriptRefUtxo = await this.getScriptRefUtxo(nftContracts.NFTMintCheckTokenScript.script());
+        this.nftMintCheckTokenscriptRefUtxo = await this.getScriptRefUtxo(nftContracts.NFTMintCheckTokenScript.script());
         this.nftMintCheckScriptRefUtxo = await this.getScriptRefUtxo(nftContracts.NFTMintCheckScript.script());
     }
 
@@ -380,7 +380,7 @@ class ContractSdk {
 
         const mintTo = contracts.TreasuryCheckScript.address(groupInfoParams[contractsMgr.GroupNFT.StkVh]).to_bech32(this.ADDR_PREFIX);
 
-        const signedTx = await contracts.TreasuryCheckTokenScript.mint(protocolParamsGlobal, utxosForFee, utxoForCollaterals, this.treasuryChecTokenscriptRefUtxo
+        const signedTx = await contracts.TreasuryCheckTokenScript.mint(protocolParamsGlobal, utxosForFee, utxoForCollaterals, this.treasuryCheckTokenscriptRefUtxo
             , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }, changeAddr, amount, mintTo, signFn, exUnitTx);
 
         return signedTx;
@@ -405,7 +405,7 @@ class ContractSdk {
 
         const mintTo = contracts.MintCheckScript.address(groupInfoParams[contractsMgr.GroupNFT.StkVh]).to_bech32(this.ADDR_PREFIX);
 
-        const signedTx = await contracts.MintCheckTokenScript.mint(protocolParamsGlobal, utxosForFee, utxoForCollaterals, this.mintChecTokenscriptRefUtxo
+        const signedTx = await contracts.MintCheckTokenScript.mint(protocolParamsGlobal, utxosForFee, utxoForCollaterals, this.mintCheckTokenscriptRefUtxo
             , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }, changeAddr, amount, mintTo, signFn, exUnitTx);
 
         return signedTx;
@@ -429,7 +429,7 @@ class ContractSdk {
 
         const mintTo = nftContracts.NFTTreasuryCheckScript.address(groupInfoParams[contractsMgr.GroupNFT.StkVh]).to_bech32(this.ADDR_PREFIX);;
 
-        const signedTx = await nftContracts.NFTTreasuryCheckTokenScript.mint(protocolParamsGlobal, utxosForFee, utxoForCollaterals, this.nftTreasuryChecTokenscriptRefUtxo
+        const signedTx = await nftContracts.NFTTreasuryCheckTokenScript.mint(protocolParamsGlobal, utxosForFee, utxoForCollaterals, this.nftTreasuryCheckTokenscriptRefUtxo
             , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }, changeAddr, amount, mintTo, signFn, exUnitTx);
 
         return signedTx;
@@ -453,7 +453,7 @@ class ContractSdk {
 
         const mintTo = nftContracts.NFTMintCheckScript.address(groupInfoParams[contractsMgr.GroupNFT.StkVh]).to_bech32(this.ADDR_PREFIX);
 
-        const signedTx = await nftContracts.NFTMintCheckTokenScript.mint(protocolParamsGlobal, utxosForFee, utxoForCollaterals, this.mintChecTokenscriptRefUtxo
+        const signedTx = await nftContracts.NFTMintCheckTokenScript.mint(protocolParamsGlobal, utxosForFee, utxoForCollaterals, this.nftMintCheckTokenscriptRefUtxo
             , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }, changeAddr, amount, mintTo, signFn, exUnitTx);
 
         return signedTx;
@@ -483,7 +483,7 @@ class ContractSdk {
         }
 
         const signedTx = await contracts.TreasuryCheckScript.burn(protocolParamsGlobal, utxosForFee
-            , utxoForCollaterals, burnUtxos, this.treasuryCheckScriptRefUtxo, this.treasuryChecTokenscriptRefUtxo
+            , utxoForCollaterals, burnUtxos, this.treasuryCheckScriptRefUtxo, this.treasuryCheckTokenscriptRefUtxo
             , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }
             , changeAddr, signFn, exUnitTx);
 
@@ -514,7 +514,7 @@ class ContractSdk {
         }
 
         const signedTx = await contracts.MintCheckScript.burn(protocolParamsGlobal, utxosForFee
-            , utxoForCollaterals, burnUtxos, this.mintCheckScriptRefUtxo, this.mintChecTokenscriptRefUtxo
+            , utxoForCollaterals, burnUtxos, this.mintCheckScriptRefUtxo, this.mintCheckTokenscriptRefUtxo
             , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }
             , changeAddr, signFn, exUnitTx);
 
@@ -545,7 +545,7 @@ class ContractSdk {
         }
 
         const signedTx = await nftContracts.NFTTreasuryCheckScript.burn(protocolParamsGlobal, utxosForFee
-            , utxoForCollaterals, burnUtxos, this.treasuryCheckScriptRefUtxo, this.treasuryChecTokenscriptRefUtxo
+            , utxoForCollaterals, burnUtxos, this.nftTreasuryCheckScriptRefUtxo, this.nftTreasuryCheckTokenscriptRefUtxo
             , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }
             , changeAddr, signFn, exUnitTx);
 
@@ -576,7 +576,7 @@ class ContractSdk {
         }
 
         const signedTx = await nftContracts.NFTMintCheckScript.burn(protocolParamsGlobal, utxosForFee
-            , utxoForCollaterals, burnUtxos, this.mintCheckScriptRefUtxo, this.mintChecTokenscriptRefUtxo
+            , utxoForCollaterals, burnUtxos, this.nftMintCheckScriptRefUtxo, this.nftMintCheckTokenscriptRefUtxo
             , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }
             , changeAddr, signFn, exUnitTx);
 
@@ -607,7 +607,7 @@ class ContractSdk {
         }
 
         const signedTx = await contracts.TreasuryCheckScript.burn(protocolParamsGlobal, utxosForFee
-            , utxoForCollaterals, burnUtxos, this.treasuryCheckScriptRefUtxo, this.treasuryChecTokenscriptRefUtxo
+            , utxoForCollaterals, burnUtxos, this.treasuryCheckScriptRefUtxo, this.treasuryCheckTokenscriptRefUtxo
             , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }
             , changeAddr, signFn, exUnitTx);
 
@@ -638,7 +638,7 @@ class ContractSdk {
         }
 
         const signedTx = await contracts.MintCheckScript.burn(protocolParamsGlobal, utxosForFee
-            , utxoForCollaterals, burnUtxos, this.mintCheckScriptRefUtxo, this.mintChecTokenscriptRefUtxo
+            , utxoForCollaterals, burnUtxos, this.mintCheckScriptRefUtxo, this.mintCheckTokenscriptRefUtxo
             , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }
             , changeAddr, signFn, exUnitTx);
 
