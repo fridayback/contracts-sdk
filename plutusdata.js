@@ -506,6 +506,29 @@ module.exports.msgAddressFromCbor = function (cbor, networkId) {
     return ls.get(0).to_hex();
 }
 
+module.exports.toPlutusDataFunctionCallData = function (functionCallData) {
+    const ls = CardanoWasm.PlutusList.new();
+    ls.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(functionCallData.functionName, 'ascii')));
+    ls.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(functionCallData.functionArgs, 'hex')));
+
+    return CardanoWasm.PlutusData.new_constr_plutus_data(
+        CardanoWasm.ConstrPlutusData.new(
+            CardanoWasm.BigNum.from_str('0'),
+            ls
+        )
+    )
+}
+
+module.exports.functionCallDataFromCbor = function (cbor) {
+    const d = CardanoWasm.PlutusData.from_hex(cbor);
+    const ls = d.as_constr_plutus_data().data().as_list();
+    const ret = {
+        functionName: Buffer.from(ls.get(0).as_bytes()).toString('ascii'),
+        functionArgs: Buffer.from(ls.get(1).as_bytes()).toString('hex')
+    }
+    return ret;
+}
+
 module.exports.toPlutusDataCrossMsgData = function (inBoundData) {
     const ls = CardanoWasm.PlutusList.new();
     ls.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(inBoundData.taskId, 'ascii')));
@@ -513,7 +536,7 @@ module.exports.toPlutusDataCrossMsgData = function (inBoundData) {
     ls.add(this.toPlutusDataMsgAddress(inBoundData.sourceContract));
     ls.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(inBoundData.targetChainId + '')));
     ls.add(this.toPlutusDataMsgAddress(inBoundData.targetContract));
-    ls.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(inBoundData.functionCallData, 'hex')));
+    ls.add(this.toPlutusDataFunctionCallData(inBoundData.functionCallData));
 
     return CardanoWasm.PlutusData.new_constr_plutus_data(
         CardanoWasm.ConstrPlutusData.new(
@@ -532,7 +555,7 @@ module.exports.crossMsgDataFromCbor = function (cbor, networkId) {
         sourceContract: this.msgAddressFromCbor(ls.get(2).to_hex(), networkId),
         targetChainId: ls.get(3).as_integer().to_str(),
         targetContract: this.msgAddressFromCbor(ls.get(4).to_hex(), networkId),
-        functionCallData: Buffer.from(ls.get(5).as_bytes()).toString('hex')
+        functionCallData: this.functionCallDataFromCbor(ls.get(5).to_hex())
     }
     return ret;
 }
