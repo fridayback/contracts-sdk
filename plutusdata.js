@@ -9,7 +9,7 @@ module.exports.TYP_PUBKEY = 0;
 module.exports.TYP_SCRHASH = 1;
 module.exports.TYPE_PTR = 2;
 
-module.exports.toPlutusDataTxId = function (txHash){
+module.exports.toPlutusDataTxId = function (txHash) {
     const ls = CardanoWasm.PlutusList.new();
     ls.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(txHash, 'hex')));
 
@@ -35,7 +35,7 @@ module.exports.toPlutusDataTxOutRef = function (txHash, index) {
     )
 }
 
-module.exports.txIdFromCbor = function (cbor){
+module.exports.txIdFromCbor = function (cbor) {
     const d = CardanoWasm.PlutusData.from_hex(cbor);
     const ls = d.as_constr_plutus_data().data();
 
@@ -359,7 +359,7 @@ module.exports.toPlutusDataOutputDatum = function (datumType, datumOrHash) {
         }
 
         default:
-            throw 'bad datum type: '+ datumType;
+            throw 'bad datum type: ' + datumType;
             break;
     }
 
@@ -464,5 +464,75 @@ module.exports.valueFromCbor = function (cbor) {
         }
     }
 
+    return ret;
+}
+
+
+module.exports.toPlutusDataMsgAddress = function (address) {
+    const ls = CardanoWasm.PlutusList.new();
+    try {
+        ls.add(toPlutusDataAddress(address));
+    } catch (error) {
+        ls.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(address, 'ascii')));
+    }
+
+
+    return CardanoWasm.PlutusData.new_constr_plutus_data(
+        CardanoWasm.ConstrPlutusData.new(
+            CardanoWasm.BigNum.from_str('0'),
+            ls
+        )
+    )
+}
+
+module.exports.msgAddressFromCbor = function (cbor, networkId) {
+    const d = CardanoWasm.PlutusData.from_hex(cbor);
+    const addressType = d.as_constr_plutus_data().alternative().to_str();
+    switch (addressType) {
+        case '0': {
+            const foreinAddr = d.as_constr_plutus_data().data().get(0).as_bytes();
+            return Buffer.from(foreinAddr).toString('ascii');
+        }
+        case '1': {
+            const localAddr = d.as_constr_plutus_data().data().get(1).as_constr_plutus_data();
+            return this.addressFromCbor(localAddr.to_hex(), networkId);
+            break;
+        }
+        case '1': {
+
+        }
+    }
+    const ls = d.as_constr_plutus_data().data().as_list();
+    return ls.get(0).to_hex();
+}
+
+module.exports.toPlutusDataCrossMsgData = function (inBoundData) {
+    const ls = CardanoWasm.PlutusList.new();
+    ls.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(inBoundData.taskId, 'ascii')));
+    ls.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(inBoundData.sourceChainId + '')));
+    ls.add(this.toPlutusDataMsgAddress(inBoundData.sourceContract));
+    ls.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(inBoundData.targetChainId + '')));
+    ls.add(this.toPlutusDataMsgAddress(inBoundData.targetContract));
+    ls.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(inBoundData.functionCallData, 'hex')));
+
+    return CardanoWasm.PlutusData.new_constr_plutus_data(
+        CardanoWasm.ConstrPlutusData.new(
+            CardanoWasm.BigNum.from_str('0'),
+            ls
+        )
+    )
+}
+
+module.exports.crossMsgDataFromCbor = function (cbor, networkId) {
+    const d = CardanoWasm.PlutusData.from_hex(cbor);
+    const ls = d.as_constr_plutus_data().data().as_list();
+    const ret = {
+        taskId: Buffer.from(ls.get(0).as_bytes()).toString('ascii'),
+        sourceChainId: ls.get(1).as_integer().to_str(),
+        sourceContract: this.msgAddressFromCbor(ls.get(2).to_hex(), networkId),
+        targetChainId: ls.get(3).as_integer().to_str(),
+        targetContract: this.msgAddressFromCbor(ls.get(4).to_hex(), networkId),
+        functionCallData: Buffer.from(ls.get(5).as_bytes()).toString('hex')
+    }
     return ret;
 }

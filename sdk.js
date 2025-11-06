@@ -6,6 +6,7 @@ let ogmiosUtils;
 const contracts = require('./contracts');
 const contractsMgr = require('./contracts-mgr');
 const nftContracts = require('./nft-contract');
+const msgContracts = require('./msg-contract');
 
 
 const ACTION_DELEGATE = 0;
@@ -53,6 +54,10 @@ class ContractSdk {
         this.nftTreasuryCheckScriptRefUtxo = await this.getScriptRefUtxo(nftContracts.NFTTreasuryCheckScript.script());
         this.nftMintCheckTokenscriptRefUtxo = await this.getScriptRefUtxo(nftContracts.NFTMintCheckTokenScript.script());
         this.nftMintCheckScriptRefUtxo = await this.getScriptRefUtxo(nftContracts.NFTMintCheckScript.script());
+
+        this.inboundCheckTokenScriptRefUtxo = await this.getScriptRefUtxo(msgContracts.InboundCheckTokenScript.script());
+        this.inboundCheckScriptRefUtxo = await this.getScriptRefUtxo(msgContracts.InboundCheckScript.script());
+        this.outboundTokenScriptRefUtxo = await this.getScriptRefUtxo(msgContracts.OutboundTokenScript.script());
     }
 
     async getScriptRefUtxo(script) {
@@ -185,6 +190,23 @@ class ContractSdk {
                     , newBalancePK, changeAddr, undefined, signFn, exUnitTx);
                 break;
             }
+            case contractsMgr.GroupNFT.InboundCheckVH:{
+                const newInboundCheckVH = utils.addressToPkhOrScriptHash(setParam);
+                signedTx = await contractsMgr.GroupInfoNFTHolderScript.setInboundCheckVH(
+                    protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
+                    , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
+                    , newInboundCheckVH, changeAddr, undefined, signFn, exUnitTx);
+                break;
+            }
+            case contractsMgr.GroupNFT.OutboundHolderVH: {
+                const newOutboundHolder = utils.addressToPkhOrScriptHash(setParam);
+
+                signedTx = await contractsMgr.GroupInfoNFTHolderScript.setOutboundTokenHolderVH(
+                    protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
+                    , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
+                    , newOutboundHolder, changeAddr, undefined, signFn, exUnitTx);
+                break;
+            }
             case contractsMgr.GroupNFT.Version: {
                 const newDatum = CardanoWasm.PlutusData.from_hex(setParam.datum);
                 const newOwner = utils.addressToPkhOrScriptHash(setParam.owner);
@@ -297,6 +319,14 @@ class ContractSdk {
 
     async setNftRefHolder(newNftRefHolder, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
         return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.NFTRefHolderVH, newNftRefHolder, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
+    }
+
+    async setOutboundTokenHolder(newOutboundTokenHolder, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.OutboundHolderVH, newOutboundTokenHolder, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
+    }
+
+    async setInboundCheckVH(newInboundCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.InboundCheckVH, newInboundCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
     }
 
     async addSignature(tx, signFn = undefined) {
@@ -466,6 +496,31 @@ class ContractSdk {
 
         return signedTx;
     }
+
+    async mintInboundCheckToken(amount, mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        const groupInfoUtxo = await this.getGroupInfoNft();
+        const groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(groupInfoUtxo.datum);
+        const adminNftUtxo = await this.getAdminNft();
+        const protocolParamsGlobal = await ogmiosUtils.getParamProtocol();
+
+        let mustSignBy = [];
+        for (let i = 0; i < mustSignByAddrs.length; i++) {
+            const addr = mustSignByAddrs[i];
+            if (utils.addressType(addr) == CardanoWasm.CredKind.Script) {
+                throw 'not supports script address'
+            }
+
+            mustSignBy.push(utils.addressToPkhOrScriptHash(addr));
+        }
+
+        const mintTo = msgContracts.InboundCheckScript.address(groupInfoParams[contractsMgr.GroupNFT.StkVh]).to_bech32(this.ADDR_PREFIX);
+
+        const signedTx = await msgContracts.InboundCheckScript.mint(protocolParamsGlobal, utxosForFee, utxoForCollaterals, this.inboundCheckTokenScriptRefUtxo
+            , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }, changeAddr, amount, mintTo, signFn, exUnitTx);
+
+        return signedTx;
+    }
+
 
     async burnTreasuryCheckTokenWithHolder(amount, holder, mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
         const groupInfoUtxo = await this.getGroupInfoNft();

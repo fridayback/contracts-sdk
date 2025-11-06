@@ -29,7 +29,7 @@ const adminaddr = CardanoWasm.BaseAddress.new(
     , CardanoWasm.Credential.from_keyhash(newPkh)
     , CardanoWasm.Credential.from_keyhash(newPkh))
 
-
+console.log('adminPK:',newPkh.to_hex());
 const payPrvKeyNext = '9b160ba482e38697c5631df832cbc2f5a9c41d9a588b2fa11dc7c370cf02058a';
 const payPrvKey = kkkk;
 const scriptRefOwnerAddr = 'addr1qys3nr0s5wqz3gw2n9satl279ntzha2z92v4ewrknr234hzx8ugllqwa07adyqwz23j797tha446p0exqa8jjypyqzasq73gym';

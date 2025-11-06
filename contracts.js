@@ -8,6 +8,7 @@ const cbor = require('cbor-sync');
 
 const contractMgr = require('./contracts-mgr');
 const nftContracts = require('./nft-contract');
+const msgContracts = require('./msg-contract');
 let MAPPINGTOKEN_POLICY;
 // let groupInfoTokenPlutus;
 // let groupInfoTokenHolderPlutus;
@@ -2711,6 +2712,7 @@ let Network_Id = 1
 function init(network = true) {
     contractMgr.init(network);
     nftContracts.init(network);
+    msgContracts.init(network);
     const currentPlutus = network ? plutus.mainnet : plutus.testnet;
     Network_Id = network ? 1 : 0;
 
