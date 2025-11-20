@@ -470,16 +470,19 @@ module.exports.valueFromCbor = function (cbor) {
 
 module.exports.toPlutusDataMsgAddress = function (address) {
     const ls = CardanoWasm.PlutusList.new();
+    let addressType = '1';
     try {
-        ls.add(toPlutusDataAddress(address));
+        // if(address === 'addr_test1wpunlryvl7aqsxe22erzlsseej87v5kk5vutvtrmzdy8dect48z0w')
+        ls.add(this.toPlutusDataAddress(address));
     } catch (error) {
         ls.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(address, 'ascii')));
+        addressType = '0';
     }
 
 
     return CardanoWasm.PlutusData.new_constr_plutus_data(
         CardanoWasm.ConstrPlutusData.new(
-            CardanoWasm.BigNum.from_str('0'),
+            CardanoWasm.BigNum.from_str(addressType),
             ls
         )
     )
