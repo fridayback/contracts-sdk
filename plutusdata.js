@@ -539,6 +539,7 @@ module.exports.toPlutusDataCrossMsgData = function (inBoundData) {
     ls.add(this.toPlutusDataMsgAddress(inBoundData.sourceContract));
     ls.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(inBoundData.targetChainId + '')));
     ls.add(this.toPlutusDataMsgAddress(inBoundData.targetContract));
+    ls.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(inBoundData.gasLimit + '')));
     ls.add(this.toPlutusDataFunctionCallData(inBoundData.functionCallData));
 
     return CardanoWasm.PlutusData.new_constr_plutus_data(
@@ -558,7 +559,8 @@ module.exports.crossMsgDataFromCbor = function (cbor, networkId) {
         sourceContract: this.msgAddressFromCbor(ls.get(2).to_hex(), networkId),
         targetChainId: ls.get(3).as_integer().to_str(),
         targetContract: this.msgAddressFromCbor(ls.get(4).to_hex(), networkId),
-        functionCallData: this.functionCallDataFromCbor(ls.get(5).to_hex())
+        gasLimit: this.get(5).as_integer().to_str,
+        functionCallData: this.functionCallDataFromCbor(ls.get(6).to_hex())
     }
     return ret;
 }

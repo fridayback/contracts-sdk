@@ -48,7 +48,7 @@ class InboundTokenScript {
     constructor(scriptCbor) {
     }
 
-    static tokenName = 'InboundTokenCoin';
+    // static tokenName = 'InboundTokenCoin';
 
     static script() {
         return inboundTokenScript;
@@ -58,8 +58,8 @@ class InboundTokenScript {
         return inboundTokenScript.hash().to_hex();
     }
 
-    static tokenId() {
-        return this.policy_id() + '.' + Buffer.from(InboundTokenScript.tokenName, 'ascii').toString('hex');
+    static tokenId(tokeNameHex) {
+        return this.policy_id() + '.' + Buffer.from(tokeNameHex, 'hex').toString('hex');
     }
 
     static async burn(protocolParams, utxosForFee, utxoForCollateral, scriptRef, utxosToBurn, burnValue, changeAddress, evaluateFn, signFn, ttl) {
@@ -237,7 +237,8 @@ class InboundTokenScript {
 
         const policy_id = redeemProof.policy_id;
 
-        const assetName = CardanoWasm.AssetName.new(Buffer.from(InboundTokenScript.tokenName, 'ascii'));
+        const tokenName = utils.addressToPkhOrScriptHash(redeemProof.proofData.crossMsgData.targetContract);
+        const assetName = CardanoWasm.AssetName.new(Buffer.from(tokenName, 'hex'));
         mintBuilder.add_asset(mint_witnes, assetName, CardanoWasm.Int.from_str('1'));
 
         //step1: construct reference input
@@ -287,7 +288,8 @@ class InboundTokenScript {
             const asset = CardanoWasm.Assets.new();
             asset.insert(assetName, CardanoWasm.BigNum.from_str('1'));
             mutiAsset.insert(scriptHash, asset);
-            const minAdaWithMintToken = utils.getMinAdaOfUtxo(protocolParams, toAddr, { coins: 1000000, assets: { [InboundTokenScript.tokenId()]: 1 } }, crossMsgDatum);
+            
+            const minAdaWithMintToken = utils.getMinAdaOfUtxo(protocolParams, toAddr, { coins: 1000000, assets: { [InboundTokenScript.tokenId(tokenName)]: 1 } }, crossMsgDatum);
             let mintedValue = CardanoWasm.Value.new(CardanoWasm.BigNum.from_str('' + minAdaWithMintToken));
             mintedValue.set_multiasset(mutiAsset);
             const outputOfInboundToken = CardanoWasm.TransactionOutput.new(toAddr, mintedValue);
