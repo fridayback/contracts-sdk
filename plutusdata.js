@@ -497,7 +497,7 @@ module.exports.msgAddressFromCbor = function (cbor, networkId) {
             return Buffer.from(foreinAddr).toString('ascii');
         }
         case '1': {
-            const localAddr = d.as_constr_plutus_data().data().get(1).as_constr_plutus_data();
+            const localAddr = d.as_constr_plutus_data().data().get(0).as_constr_plutus_data();
             return this.addressFromCbor(localAddr.to_hex(), networkId);
             break;
         }
@@ -524,7 +524,7 @@ module.exports.toPlutusDataFunctionCallData = function (functionCallData) {
 
 module.exports.functionCallDataFromCbor = function (cbor) {
     const d = CardanoWasm.PlutusData.from_hex(cbor);
-    const ls = d.as_constr_plutus_data().data().as_list();
+    const ls = d.as_constr_plutus_data().data();
     const ret = {
         functionName: Buffer.from(ls.get(0).as_bytes()).toString('ascii'),
         functionArgs: Buffer.from(ls.get(1).as_bytes()).toString('hex')
@@ -552,15 +552,22 @@ module.exports.toPlutusDataCrossMsgData = function (inBoundData) {
 
 module.exports.crossMsgDataFromCbor = function (cbor, networkId) {
     const d = CardanoWasm.PlutusData.from_hex(cbor);
-    const ls = d.as_constr_plutus_data().data().as_list();
+    const ls = d.as_constr_plutus_data().data();
+    const taskId = Buffer.from(ls.get(0).as_bytes()).toString('ascii');
+    const sourceChainId = ls.get(1).as_integer().to_str();
+    const sourceContract = this.msgAddressFromCbor(ls.get(2).to_hex(), networkId);
+    const targetChainId = ls.get(3).as_integer().to_str();
+    const targetContract = this.msgAddressFromCbor(ls.get(4).to_hex(), networkId);
+    const gasLimit = ls.get(5).as_integer().to_str();
+    const functionCallData = this.functionCallDataFromCbor(ls.get(6).to_hex());
     const ret = {
-        taskId: Buffer.from(ls.get(0).as_bytes()).toString('ascii'),
-        sourceChainId: ls.get(1).as_integer().to_str(),
-        sourceContract: this.msgAddressFromCbor(ls.get(2).to_hex(), networkId),
-        targetChainId: ls.get(3).as_integer().to_str(),
-        targetContract: this.msgAddressFromCbor(ls.get(4).to_hex(), networkId),
-        gasLimit: this.get(5).as_integer().to_str,
-        functionCallData: this.functionCallDataFromCbor(ls.get(6).to_hex())
+        taskId,
+        sourceChainId,
+        sourceContract,
+        targetChainId,
+        targetContract,
+        gasLimit,
+        functionCallData
     }
     return ret;
 }
