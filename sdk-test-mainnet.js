@@ -398,14 +398,14 @@ async function main() {
     // const treasuryCheckRef = await tryScriptRefUtxo(contracts.TreasuryCheckScript.script());
     // const mintCheckRef = await tryScriptRefUtxo(contracts.MintCheckScript.script());
     {
-        const utxosForFee = await getUtxoForFee();
-        let adminInfo = await getAdminInfo();
-        console.log('before setAdmin:', JSON.stringify(adminInfo));
-        let signedTx = await sdk.setTreasuryCheckVH(newTreasyCheckVH, mustSignBy, utxosForFee, [collateralUtxo], admin);
-        console.log('--%%%%%%%%%%%%%1-------\n', signedTx.to_json());
-        const exUnit = await finalTxEvaluate(signedTx);
-        signedTx = await sdk.setTreasuryCheckVH(newTreasyCheckVH, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
-        console.log('--%%%%%%%%%%%%%2-------\n', signedTx.to_json());
+        // const utxosForFee = await getUtxoForFee();
+        // let adminInfo = await getAdminInfo();
+        // console.log('before setAdmin:', JSON.stringify(adminInfo));
+        // let signedTx = await sdk.setTreasuryCheckVH(newTreasyCheckVH, mustSignBy, utxosForFee, [collateralUtxo], admin);
+        // console.log('--%%%%%%%%%%%%%1-------\n', signedTx.to_json());
+        // const exUnit = await finalTxEvaluate(signedTx);
+        // signedTx = await sdk.setTreasuryCheckVH(newTreasyCheckVH, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
+        // console.log('--%%%%%%%%%%%%%2-------\n', signedTx.to_json());
         // let o = await submitAndWaitConfirmed(signedTx);
         // adminInfo = await getAdminInfo();
         // console.log('after setAdmin:', JSON.stringify(adminInfo));
@@ -429,12 +429,12 @@ async function main() {
     {
         const utxosForFee = await getUtxoForFee();
         let adminInfo = await getAdminInfo();
-        console.log('before setAdmin:', JSON.stringify(adminInfo));
-        let signedTx = await sdk.setAdmin(signatories, 1, mustSignBy, utxosForFee, [collateralUtxo], admin);
-        console.log('--%%%%%%%%%%%%%1-------\n', signedTx.to_json());
-        const exUnit = await finalTxEvaluate(signedTx);
-        signedTx = await sdk.setAdmin(signatories, 2, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
-        console.log('--%%%%%%%%%%%%%2-------\n', signedTx.to_json());
+        // console.log('before setAdmin:', JSON.stringify(adminInfo));
+        // let signedTx = await sdk.setAdmin(signatories, 1, mustSignBy, utxosForFee, [collateralUtxo], admin);
+        // console.log('--%%%%%%%%%%%%%1-------\n', signedTx.to_json());
+        // const exUnit = await finalTxEvaluate(signedTx);
+        // signedTx = await sdk.setAdmin(signatories, 2, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
+        // console.log('--%%%%%%%%%%%%%2-------\n', signedTx.to_json());
         // let o = await submitAndWaitConfirmed(signedTx);
         // adminInfo = await getAdminInfo();
         // console.log('after setAdmin:', JSON.stringify(adminInfo));
@@ -503,13 +503,13 @@ async function main() {
     }
 
     {
-        // const count = 3;
-        // console.log('amount before mint:', (await getCheckTokenUtxo(0)).length);
-        // const utxosForFee = await getUtxoForFee();
-        // let signedTx = await sdk.mintTreasuryCheckToken(count, mustSignBy, utxosForFee, [collateralUtxo], admin);
-        // const exUnit = await finalTxEvaluate(signedTx);
-        // console.log('--exUnit---\n', JSON.stringify(exUnit));
-        // signedTx = await sdk.mintTreasuryCheckToken(count, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
+        const count = 3;
+        console.log('amount before mint:', (await getCheckTokenUtxo(0)).length);
+        const utxosForFee = await getUtxoForFee();
+        let signedTx = await sdk.mintTreasuryCheckToken(count, mustSignBy, utxosForFee, [collateralUtxo], admin);
+        const exUnit = await finalTxEvaluate(signedTx);
+        console.log('--exUnit---\n', JSON.stringify(exUnit));
+        signedTx = await sdk.mintTreasuryCheckToken(count, mustSignBy, utxosForFee, [collateralUtxo], admin, signFn, exUnit);
         // const o = await submitAndWaitConfirmed(signedTx);
         // console.log('amount after mint:', (await getCheckTokenUtxo(0)).length);
     }
