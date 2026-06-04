@@ -35,6 +35,29 @@ module.exports.toPlutusDataTxOutRef = function (txHash, index) {
     )
 }
 
+module.exports.toPlutusDataOutputReference_aiken = function (txHash, index) {
+    const ls = CardanoWasm.PlutusList.new();
+
+    ls.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(txHash, 'hex')));
+    ls.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(index + '')));
+
+    return CardanoWasm.PlutusData.new_constr_plutus_data(
+        CardanoWasm.ConstrPlutusData.new(
+            CardanoWasm.BigNum.from_str('0'),
+            ls
+        )
+    )
+}
+
+module.exports.OutputReference_aikenFromCbor = function (cbor) {
+    const d = CardanoWasm.PlutusData.from_hex(cbor);
+    const ls = d.as_constr_plutus_data().data();
+
+    const txHash = Buffer.from(ls.get(0).as_bytes()).toString('hex');
+    const index = ls.get(0).as_integer().to_str()*1;
+    return { txHash, index };
+}
+
 module.exports.txIdFromCbor = function (cbor) {
     const d = CardanoWasm.PlutusData.from_hex(cbor);
     const ls = d.as_constr_plutus_data().data();

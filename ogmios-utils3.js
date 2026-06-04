@@ -1,100 +1,117 @@
-
 const {
     createInteractionContext,
-    createStateQueryClient,
-    createTxSubmissionClient, TxSubmission
+    createLedgerStateQueryClient,
+    createTransactionSubmissionClient
 } = require('@cardano-ogmios/client');
 const CardanoWasm = require('@emurgo/cardano-serialization-lib-nodejs');
-
 const utils = require('./utils');
 const cbor = require('cbor-sync');
 
-
-
 //---------------------------------------------------------------------------------------------
 let context;
-let txSubmitclient;
-let query;
+let stateQueryClient;
+let txSubmissionClient;
 
 const errorHandler = async (error) => {
-    console.error(error);
-    await txSubmitclient.shutdown();
+    console.error('OGMios error:', error);
+    if (txSubmissionClient) {
+        await txSubmissionClient.shutdown();
+    }
+    if (stateQueryClient) {
+        await stateQueryClient.shutdown();
+    }
 }
 
 const closeHandler = async (code, reason) => {
-    // console.log('WS close: code =', code, 'reason =', reason);
-    // await client.shutdown();
+    console.log('WebSocket closed: code =', code, 'reason =', reason);
 }
-//---------------------------------------------------------------------------------------------
 
-// const BlockFrostAPI = require('@blockfrost/blockfrost-js').BlockFrostAPI;
-// const blockFrostApi = new BlockFrostAPI({ isTestNet: true, projectId: 'testnetuBFkbLWQvS43rZCQSrYkFFL1gnHaxt3Z' });
+// 默认连接配置
+let DEFAULT_OGMIOS_URL = 'ws://52.13.9.234:1337';
 
-// const interVia = 'api';
-const interVia = 'ogmios';
+// 初始化连接
+async function initializeConnection(ogmiosUrl = DEFAULT_OGMIOS_URL) {
+    if (context && stateQueryClient && txSubmissionClient) {
+        return { context, stateQueryClient, txSubmissionClient };
+    }
+
+    try {
+        // 创建交互上下文
+        context = await createInteractionContext(errorHandler, closeHandler, {
+            connection: {
+                host: ogmiosUrl.includes('://') ? ogmiosUrl.split('://')[1].split(':')[0] : ogmiosUrl.split(':')[0],
+                port: parseInt(ogmiosUrl.split(':').pop()),
+                tls: ogmiosUrl.startsWith('wss://')
+            }
+        });
+
+        // 创建状态查询客户端
+        stateQueryClient = await createLedgerStateQueryClient(context);
+
+        // 创建交易提交客户端
+        txSubmissionClient = await createTransactionSubmissionClient(context);
+
+        console.log(`Connected to OGMios at ${ogmiosUrl}`);
+        return { context, stateQueryClient, txSubmissionClient };
+    } catch (error) {
+        console.error('Failed to initialize OGMios connection:', error);
+        throw error;
+    }
+}
 
 //--------------------------------------------------
 module.exports.getParamProtocol = async function (via = 'ogmios') {
     if (via == 'ogmios') {
-        let protocolParams = await query.currentProtocolParameters();
+        await initializeConnection();
 
+        let protocolParams = await stateQueryClient.protocolParameters();
+        console.log('Raw protocol parameters fetched from OGMios:', JSON.stringify(protocolParams.plutusCostModels));
+        // const v1 = CardanoWasm.CostModel.from_bytes(protocolParams.plutusCostModels[`plutus:v1`]);
+        // const v2 = CardanoWasm.CostModel.from_bytes(protocolParams.plutusCostModels[`plutus:v2`]);
+        // const v3 = CardanoWasm.CostModel.from_bytes(protocolParams.plutusCostModels[`plutus:v3`]);
         const v1 = CardanoWasm.CostModel.new();
         let index = 0;
-        for (const key in protocolParams.costModels[`plutus:v1`]) {
-            v1.set(index, CardanoWasm.Int.new_i32(protocolParams.costModels[`plutus:v1`][key]));
+        for (const key in protocolParams.plutusCostModels[`plutus:v1`]) {
+            // for (const key in costModelsLib[`PlutusV1`]) {
+            v1.set(index, CardanoWasm.Int.new_i32(protocolParams.plutusCostModels[`plutus:v1`][index]));
+            // v1.set(index, CardanoWasm.Int.new_i32(costModelsLib[`PlutusV1`][key]));
             index++;
         }
 
         const v2 = CardanoWasm.CostModel.new();
         index = 0;
-        for (const key in protocolParams.costModels[`plutus:v2`]) {
-            v2.set(index, CardanoWasm.Int.new_i32(protocolParams.costModels[`plutus:v2`][key]));
+        for (const key in protocolParams.plutusCostModels[`plutus:v2`]) {
+            // for (const key in costModelsLib[`PlutusV2`]) {
+            v2.set(index, CardanoWasm.Int.new_i32(protocolParams.plutusCostModels[`plutus:v2`][index]));
+            // v2.set(index, CardanoWasm.Int.new_i32(costModelsLib[`PlutusV2`][key]));
+            index++;
+        }
+        const v3 = CardanoWasm.CostModel.new();
+        index = 0;
+        for (const key in protocolParams.plutusCostModels[`plutus:v3`]) {
+            // for (const key in costModelsLib[`PlutusV3`]) {
+            v3.set(index, CardanoWasm.Int.new_i32(protocolParams.plutusCostModels[`plutus:v3`][index]));
+            // v3.set(index, CardanoWasm.Int.new_i32(costModelsLib[`PlutusV3`][key]));
             index++;
         }
 
-        const v3 = CardanoWasm.CostModel.new();
-        index = 0;
-        for (const key in protocolParams.costModels[`plutus:v3`]) {
-            v3.set(index, CardanoWasm.Int.new_i32(protocolParams.costModels[`plutus:v3`][key]));
-            index++;
-        }
         protocolParams.costModels = CardanoWasm.Costmdls.new();
         protocolParams.costModels.insert(CardanoWasm.Language.new_plutus_v1(), v1);
         protocolParams.costModels.insert(CardanoWasm.Language.new_plutus_v2(), v2);
         protocolParams.costModels.insert(CardanoWasm.Language.new_plutus_v3(), v3);
+        console.log('Protocol parameters fetched and cost models initialized successfully.', protocolParams);
 
         return protocolParams;
     } else {
         throw 'Not Support BlockFrostApi'
-        // let latest_block = await blockFrostApi.blocksLatest();
-        // let protocolParams = await blockFrostApi.epochsParameters(latest_block.epoch);
-
-        // let index = 0;
-        // const v1 = CardanoWasm.CostModel.new();
-        // for (const key in protocolParams.cost_models.PlutusV1) {
-        //     v1.set(index, CardanoWasm.Int.new_i32(protocolParams.cost_models.PlutusV1[key]));
-        //     index++;
-        // }
-
-        // const v2 = CardanoWasm.CostModel.new();
-        // index = 0;
-        // for (const key in protocolParams.cost_models.PlutusV2) {
-        //     v2.set(index, CardanoWasm.Int.new_i32(protocolParams.cost_models.PlutusV2[key]));
-        //     index++;
-        // }
-
-        // protocolParams.costModels = CardanoWasm.Costmdls.new();
-        // protocolParams.costModels.insert(CardanoWasm.Language.new_plutus_v1(), v1);
-        // protocolParams.costModels.insert(CardanoWasm.Language.new_plutus_v2(), v2);
-        // return protocolParams;
     }
-
 }
 
 module.exports.getScriptRefByScriptHash = async function (scriptRefOwnerAddr, scriptHash) {
     let refUtxo = await this.getUtxo(scriptRefOwnerAddr);
     const ref = refUtxo.find(o => {
         const { script: scriptTmp } = utils.plutusScriptFromScriptRef(o.script);
+        if (!scriptTmp) return false;
         return scriptTmp.hash().to_hex() == scriptHash
 
     });
@@ -105,47 +122,39 @@ module.exports.getScriptRefByScriptHash = async function (scriptRefOwnerAddr, sc
 module.exports.getUtxo = async function (address, coinValue = 0, via = 'ogmios') {
     let ret = [];
     if (via == 'ogmios') {
-        let utxos = await query.utxo([address]);
-        // console.log("utxos=", utxos)
+        await initializeConnection();
+
+        let utxos = await stateQueryClient.utxo({ addresses: [address] });
 
         for (let i = 0; i < utxos.length; i++) {
             const utxo = utxos[i];
-            if (coinValue && CardanoWasm.BigNum.from_str(utxo[1].value.coins + '').compare(
+            if (coinValue && CardanoWasm.BigNum.from_str(utxo.value.ada.lovelace + '').compare(
                 CardanoWasm.BigNum.from_str('' + coinValue)
             ) < 0) continue;
-            for (const assetId in utxo[1].value.assets) {
-                // console.log('====<',CardanoWasm.BigNum.from_str(utxo[1].value.assets[assetId]+'').to_str());
-                utxo[1].value.assets[assetId] = CardanoWasm.BigNum.from_str(utxo[1].value.assets[assetId] + '').to_str();
+            let assetValue = {};
+            for (const polocyId in utxo.value) {
+                if (polocyId == 'ada') continue;
+                for (const assetName in utxo.value[polocyId]) {
+                    assetValue[polocyId + '.' + assetName] = CardanoWasm.BigNum.from_str(utxo.value[polocyId][assetName] + '').to_str();
+                }
+                // utxo[1].value.assets[polocyId] = CardanoWasm.BigNum.from_str(utxo[1].value.assets[polocyId] + '').to_str();
             }
             ret.push({
-                txHash: utxo[0].txId,
-                index: utxo[0].index,
+                txHash: utxo.transaction.id,
+                index: utxo.index,
                 value: {
-                    coins: CardanoWasm.BigNum.from_str(utxo[1].value.coins + '').to_str(),
-                    assets: utxo[1].value.assets
+                    coins: CardanoWasm.BigNum.from_str(utxo.value.ada.lovelace + '').to_str(),
+                    assets: assetValue
                 },
-                address: utxo[1].address,
-                datum: utxo[1].datum,
-                datumHash: utxo[1].datumHash,
-                script: utxo[1].script
+                address: utxo.address,
+                datum: utxo.datum,
+                datumHash: utxo.datumHash,
+                script: utxo.script
             })
         }
     } else {
         throw 'Not Support BlockFrostApi'
-        // const utxos = await blockFrostApi.addressesUtxosAll(address);
 
-        // for (let i = 0; i < utxos.length; i++) {
-        //     const utxo = utxos[i];
-        //     if (coinValue && CardanoWasm.BigNum.from_str(utxo.amount[0].quantity).compare(
-        //         CardanoWasm.BigNum.from_str('' + coinValue)
-        //     ) < 0) continue;
-        //     ret.push({
-        //         txHash: utxo.tx_hash,
-        //         index: utxo.output_index,
-        //         value: utxo.amount[0].quantity,
-        //         address: address
-        //     })
-        // }
     }
 
     return ret;
@@ -159,14 +168,6 @@ module.exports.waitTxConfirmed = async (addr, txHash, slots = 20) => {
             const utxos = await this.getUtxo(addr);
             const utxo = utxos.find(o => o.txHash == txHash);
             resolve(utxo);
-            // if(utxo) resolve(utxo);
-            // else {
-            //     if(slots<=0) reject('Timeout');
-            //     else{
-            //         const ret = await waitTxConfirmed(addr,txHash,slots-1);
-            //         resolve(ret);
-            //     }
-            // }
         }, 5000, addr, txHash);
     });
     let utxo = await p;
@@ -182,14 +183,8 @@ module.exports.waitTxConfirmed = async (addr, txHash, slots = 20) => {
 }
 
 module.exports.submitTx = async function (signedTx) {
-    if (interVia == 'ogmios') {
-        return await txSubmitclient.submitTx(Buffer.from(signedTx.to_bytes()).toString('hex'));
-
-    } else {
-        throw 'Not Support BlockFrostApi'
-        // return await blockFrostApi.txSubmit(signedTx.to_bytes());
-    }
-
+    await initializeConnection();
+    return await txSubmissionClient.submitTransaction(Buffer.from(signedTx.to_bytes()).toString('hex'));
 }
 
 /**
@@ -205,47 +200,82 @@ module.exports.signFn = (skey, hash) => {
     return { vkey, signature };
 }
 
-module.exports.init_ogmios = async function (hostServer = { host: '127.0.0.1', port: 1337, tls: false}) {
-    let host = '127.0.0.1';
-    let port = 1337;
-    let tls = false;
-    let apiKey = undefined;
-    if (hostServer) {
-        if (hostServer.host) host = hostServer.host;
-        if (hostServer.port) port = hostServer.port;
-        if (hostServer.tls) tls = hostServer.tls;
+module.exports.init_ogmios = async function (hostServer = { host: '52.13.9.234', port: 1337, tls: false }) {
+    // 重置连接以便使用新的URL
+    if (txSubmissionClient) {
+        await txSubmissionClient.shutdown();
     }
-    context = await createInteractionContext(errorHandler, closeHandler, { connection: { host, port, tls }, interactionType: 'LongRunning' });
-    txSubmitclient = await createTxSubmissionClient(context);
-    query = await createStateQueryClient(context);
-    const blockHeight = await query.blockHeight();
-    // console.log(blockHeight);
-    // const ss = await this.getUtxo('addr_test1qz6twkzgss75sk379u0e27phvwhmtqqfuhl5gnx7rh7nux2xg4uwrhx9t58far8hp3a06hfdfzlsxgfrzqv5ryc78e4s4dwh26')
-    // console.log(blockHeight);
-    // // context.socket.close()
-    // const fd = await query.eraStart();
-    // const soltConfig = await query.eraSummaries();
-    // const tips = await query.chainTip();
-    // const genisis = await query.genesisConfig();
+    if (stateQueryClient) {
+        await stateQueryClient.shutdown();
+    }
+    context = null;
+    stateQueryClient = null;
+    txSubmissionClient = null;
 
-    // console.log('===>',this.soltToTimestamp(28180867,soltConfig,genisis));
+    // 处理参数：支持字符串URL或对象
+    let host, port, tls;
+
+    if (typeof hostServer === 'string') {
+        // 字符串格式的URL
+        const url = hostServer.startsWith('ws://') || hostServer.startsWith('wss://') ? hostServer : `ws://${hostServer}`;
+        const urlObj = new URL(url);
+        host = urlObj.hostname;
+        port = parseInt(urlObj.port);
+        tls = urlObj.protocol === 'wss:';
+    } else {
+        // 对象格式
+        host = hostServer.host || '52.13.9.234';
+        port = hostServer.port || 1337;
+        tls = hostServer.tls || false;
+    }
+
+    // 更新默认URL
+    DEFAULT_OGMIOS_URL = `ws${tls ? 's' : ''}://${host}:${port}`;
+
+    // 初始化新连接
+    await initializeConnection(DEFAULT_OGMIOS_URL);
 }
-//eb1905f4b011bc3412d65a1977668abbe4fa3538d3bd4e828076d64d
+
 module.exports.getdelegationsAndRewards = async function (stakeKeyHash) {
-    const infos = await query.delegationsAndRewards([stakeKeyHash]);
+    await initializeConnection();
+    const infos = await stateQueryClient.delegationsAndRewards([stakeKeyHash]);
     return infos[stakeKeyHash];
 }
 
-module.exports.currentNetworkSlotToTimestamp = async function (slot) {
-    const eraSummaries = await query.eraSummaries();
-    const genisis = await query.genesisConfig();
+// module.exports.currentNetworkSlotToTimestamp = async function (slot) {
+//     await initializeConnection();
+//     const eraSummaries = await stateQueryClient.eraSummaries();
+//     const genesis = await stateQueryClient.genesisConfiguration();
 
-    return this.soltToTimestamp(slot, eraSummaries, genisis);
+//     return this.soltToTimestamp(slot, eraSummaries, genesis);
+// }
+
+module.exports.currentNetworkSlotToTimestamp = async function (slot) {
+    await initializeConnection();
+    // 1. 获取 Era Summaries
+    const eraSummaries = await stateQueryClient.eraSummaries();
+
+    // 2. 定位 slot 所在的 Era
+    const currentEra = eraSummaries.find(
+        (era) => slot >= era.start.slot && slot < era.end.slot
+    );
+
+    if (!currentEra) {
+        throw new Error(`Slot ${slot} is not within any known era.`);
+    }
+
+    // 3. 计算偏移量并转换为时间戳
+    const slotLengthInMs = currentEra.parameters.slotLength.milliseconds;
+    const slotOffset = slot - currentEra.start.slot;
+    const genesisConfig = await stateQueryClient.genesisConfiguration('byron');
+    const startTime = new Date(genesisConfig.startTime).getTime();
+    // const eraStartTimestamp = (new Date(currentEra.start.time.seconds)).getTime();
+    console.log(new Date(currentEra.start.time.seconds).toUTCString());
+
+    return startTime + currentEra.start.time.seconds * 1000 + slotOffset * slotLengthInMs;
 }
 
-module.exports.soltToTimestamp = function (slot, eraSummaries, genisis) {
-
-    // const slotConfig = await query.eraSummaries(); 
+module.exports.soltToTimestamp = function (slot, eraSummaries, genesis) {
     const earIndex = function (slot, slotConfig) {
         for (let i = 0; i < slotConfig.length; i++) {
             const ear = slotConfig[i];
@@ -259,57 +289,70 @@ module.exports.soltToTimestamp = function (slot, eraSummaries, genisis) {
         throw `Bad slot ${slot}`;
     }
 
-    let sysStartTimeStamp = Date.parse(genisis.systemStart);
-    const earIndeNumber = earIndex(slot, eraSummaries);
-    const targetEar = eraSummaries[earIndeNumber];
-    // console.log(JSON.stringify(eraSummaries));
-    // for (let i = 0; i < eraSummaries.length; i++) {
-    //     const ear = eraSummaries[i];
-    //     // sysStartTimeStamp += ear.time + ear.
-    // } 1683864067000 - 1654041600000 - 5184000
-    return sysStartTimeStamp + targetEar.start.time * 1000 + (slot - targetEar.start.slot) * targetEar.parameters.slotLength * 1000
+    let sysStartTimeStamp = Date.parse(genesis.systemStart);
+    const earIndexNumber = earIndex(slot, eraSummaries);
+    const targetEar = eraSummaries[earIndexNumber];
 
+    return sysStartTimeStamp + targetEar.start.time * 1000 + (slot - targetEar.start.slot) * targetEar.parameters.slotLength * 1000;
 }
 
 module.exports.getLastestSolt = async function () {
-    const a = await query.chainTip();
-    return a.slot;
+    await initializeConnection();
+    const tip = await stateQueryClient.networkTip();
+    return tip.slot;
 }
 
-module.exports.unInit = async function () {
-    context.socket.close();
+module.exports.blockHeight = async function () {
+    await initializeConnection();
+    const tip = await stateQueryClient.networkTip();
+    return tip.blockNo || tip.slot;
 }
 
 module.exports.evaluateTx = async (signedTx) => {
     try {
-        const cost = await TxSubmission.evaluateTx(context, signedTx.to_hex());
-        // console.log(JSON.stringify(cost));
-        return cost;
+        await initializeConnection();
+        const cost = await txSubmissionClient.evaluateTransaction(signedTx.to_hex());
+        let ret = {};
+        for (let index = 0; index < cost.length; index++) {
+            const c = cost[index];
+            ret[c.validator.purpose + ':' + c.validator.index] = { memory: c.budget.memory, steps: c.budget.cpu };
+        }
+        return ret;
     } catch (e) {
         console.error(e);
-        for (let i = 0; i < e.length; i++) {
-            const err = e[i];
-            console.error(err.stack);
+        if (Array.isArray(e)) {
+            for (let i = 0; i < e.length; i++) {
+                const err = e[i];
+                console.error(err.stack || err);
+            }
         }
+        throw e;
     }
 }
 
 module.exports.evaluate = async (signedTxRaw) => {
     try {
-        const cost = await TxSubmission.evaluateTx(context, signedTxRaw);
-        // console.log(JSON.stringify(cost));
-        return cost;
+        await initializeConnection();
+        const cost = await txSubmissionClient.evaluateTransaction(signedTxRaw);
+        let ret = {};
+        for (let index = 0; index < cost.length; index++) {
+            const c = cost[index];
+            ret[c.validator.purpose + ':' + c.validator.index] = { memory: c.budget.memory, steps: c.budget.cpu };
+        }
+        return ret;
     } catch (e) {
         console.error(e);
-        for (let i = 0; i < e.length; i++) {
-            const err = e[i];
-            console.error(err.stack);
+        if (Array.isArray(e)) {
+            for (let i = 0; i < e.length; i++) {
+                const err = e[i];
+                console.error(err.stack || err);
+            }
         }
+        throw e;
     }
 }
 
-
-module.exports.fixTxExuintByEvaluate = async function (protocolParams, txRaw, collateralUtxos, gasMutipl = 1) {
+module.exports.fixTxExuintByEvaluate = async function (protocolParams, costModesLib, txRaw, collateralUtxos, gasMutipl = 1) {
     const exUnitEVA = await this.evaluate(txRaw);
 
     let total_ex_mem = 0;
@@ -346,14 +389,12 @@ module.exports.fixTxExuintByEvaluate = async function (protocolParams, txRaw, co
                 CardanoWasm.Ed25519Signature.from_hex('b31d2a51199f1c47f1d3f10e7a4b68bf717ded8d8e0346b8d37a2e44a02088ac62f6ea82b0b13fda81da242c92def5b5fadb3e7e16459897f000b1bd4e09a30b')
             );
             vks.add(vk);
-            // console.log('*******2', vks.to_json());
         }
         witnessSset.set_vkeys(vks);
 
         tx = CardanoWasm.Transaction.new(
             tx.body(), witnessSset, tx.auxiliary_data()
         )
-        // console.log('&&&&&&&2', tx.to_json());
     }
     const redeemers = witnessSset.redeemers();
     const redeemersNew = CardanoWasm.Redeemers.new();
@@ -406,9 +447,6 @@ module.exports.fixTxExuintByEvaluate = async function (protocolParams, txRaw, co
     ).checked_add(CardanoWasm.BigNum.from_str('' + protocolParams.minFeeConstant));
 
     const total_fee = plutusCost.checked_add(txfeeWithoutPlutus);
-    // console.log('txfeeWithoutPlutus=', txfeeWithoutPlutus.to_str());
-    // console.log('plutusCost=', plutusCost.to_str());
-    // console.log('total_fee=', total_fee.to_str());
 
     const newBody = CardanoWasm.TransactionBody.new(tx.body().inputs(), tx.body().outputs(), total_fee, tx.body().ttl());
     if (tx.body().auxiliary_data_hash()) newBody.set_auxiliary_data_hash(tx.body().auxiliary_data_hash());
@@ -420,7 +458,6 @@ module.exports.fixTxExuintByEvaluate = async function (protocolParams, txRaw, co
         const utxoCollateral = collateralUtxos[i];
         const txId = CardanoWasm.TransactionHash.from_bytes(Buffer.from(utxoCollateral.txHash, 'hex'));
         const input = CardanoWasm.TransactionInput.new(txId, utxoCollateral.index);
-        // const value = CardanoWasm.Value.new(CardanoWasm.BigNum.from_str(utxoCollateral.value + ''));
         const value = utils.funValue(utxoCollateral.value);
         const from = CardanoWasm.Address.from_bech32(utxoCollateral.address);
         collaterOwnerAddress = from;
@@ -438,10 +475,10 @@ module.exports.fixTxExuintByEvaluate = async function (protocolParams, txRaw, co
     newBody.set_reference_inputs(tx.body().reference_inputs());
     newBody.set_required_signers(tx.body().required_signers());
 
-    const costModesLib = protocolParams.costModels;//getCostModels(protocolParams);
-    const tmp = CardanoWasm.Costmdls.new();
-    tmp.insert(CardanoWasm.Language.new_plutus_v2(), costModesLib.get(CardanoWasm.Language.new_plutus_v2()));
-    const hash = CardanoWasm.hash_script_data(redeemersNew, tmp);
+    // const costModesLib = protocolParams.costModels;
+    // const tmp = CardanoWasm.Costmdls.new();
+    // tmp.insert(CardanoWasm.Language.new_plutus_v2(), costModesLib.get(CardanoWasm.Language.new_plutus_v2()));
+    const hash = CardanoWasm.hash_script_data(redeemersNew, costModesLib);
     newBody.set_script_data_hash(hash);
     if (tx.body().update()) newBody.set_update(tx.body().update());
     if (tx.body().validity_start_interval()) newBody.set_validity_start_interval(tx.body().validity_start_interval());

@@ -20,12 +20,12 @@ let nftMintCheckTokenScript;
 let nftRefHolderScript;
 
 
-const DEV = true;
+const PRD = true;
 function getCostModels(protocolParams) {
-    if (DEV) {
-        return CardanoWasm.TxBuilderConstants.plutus_conway_cost_models();//protocolParams.costModels;
+    if (PRD) {
+        return protocolParams.costModels;
     } else {
-        return CardanoWasm.TxBuilderConstants.plutus_vasil_cost_models();
+        return CardanoWasm.TxBuilderConstants.plutus_conway_cost_models();
     }
 }
 class NFTRefHolderScript {
@@ -235,10 +235,7 @@ class NFTTreasuryScript {
 
             const redeemer = CardanoWasm.Redeemer.new(CardanoWasm.RedeemerTag.new_spend(), CardanoWasm.BigNum.from_str('0'), redeemerData, exUnits);
 
-            const buf = Buffer.from(treasuryCheckRef.script['plutus:v2'], 'hex');
-            const cborHex = cbor.encode(buf, 'buffer');
-            const scriptTmp = CardanoWasm.PlutusScript.from_bytes_v2(cborHex);
-            const scriptSize = scriptTmp.bytes().byteLength;
+            const { script: scriptTmp, scriptSize } = utils.plutusScriptFromScriptRef(treasuryCheckRef);
             totalScriptSize += scriptSize;
 
             const witness = CardanoWasm.PlutusWitness.new_with_ref_without_datum(CardanoWasm.PlutusScriptSource.new_ref_input(
@@ -286,10 +283,7 @@ class NFTTreasuryScript {
                 exUnits
             );
 
-            const buf = Buffer.from(scriptRefUtxo.script['plutus:v2'], 'hex');
-            const cborHex = cbor.encode(buf, 'buffer');
-            const scriptTmp = CardanoWasm.PlutusScript.from_bytes_v2(cborHex);
-            const scriptSize = scriptTmp.bytes().byteLength;
+            const { script: scriptTmp, scriptSize } = utils.plutusScriptFromScriptRef(scriptRefUtxo);
             totalScriptSize += scriptSize;
 
             const witness = CardanoWasm.PlutusWitness.new_with_ref_without_datum(CardanoWasm.PlutusScriptSource.new_ref_input(
@@ -310,8 +304,8 @@ class NFTTreasuryScript {
         let valueOutputOfTreasury = spendInputs.total_value().checked_sub(outputValue);
         // console.log(valueOutputOfTreasury.to_json());
 
-        let datumTmp = redeemProof.userData ? CardanoWasm.PlutusData.from_hex(redeemProof.userData): undefined;
-        if(isTreasury) datumTmp = datum42;
+        let datumTmp = redeemProof.userData ? CardanoWasm.PlutusData.from_hex(redeemProof.userData) : undefined;
+        if (isTreasury) datumTmp = datum42;
 
         let minAdaOfTransferOutput = utils.getMinAdaOfUtxo(protocolParams, redeemProof.to, transferValue, datumTmp);
         if (outputValue.coin().to_str() * 1 < minAdaOfTransferOutput * 1) outputValue.set_coin(CardanoWasm.BigNum.from_str(minAdaOfTransferOutput + ''));//COPY:5
@@ -319,7 +313,7 @@ class NFTTreasuryScript {
         const treasuryAddress = NFTTreasuryScript.address(groupInfo[contractMgr.GroupNFT.StkVh])
 
         // if (valueOutputOfTreasury.multiasset() && valueOutputOfTreasury.multiasset().len() > 0) {//Just spend all input of treasury
-        
+
 
         let output = CardanoWasm.TransactionOutput.new(CardanoWasm.Address.from_bech32(redeemProof.to), outputValue);
         if (utils.addressType(redeemProof.to) == CardanoWasm.CredKind.Script) {
@@ -367,7 +361,7 @@ class NFTTreasuryScript {
         // txBuilder.set_script_data_hash(hash);
 
 
-        if(redeemProof.txType == NFTTreasuryScript.BALANCETX){
+        if (redeemProof.txType == NFTTreasuryScript.BALANCETX) {
             txBuilder.add_required_signer(CardanoWasm.Ed25519KeyHash.from_hex(groupInfo[contractMgr.GroupNFT.BalanceWorker]));
         }
 
@@ -408,7 +402,9 @@ class NFTTreasuryScript {
         // console.log('real Fee:', tx.body().fee().to_str());
         const draftTx = CardanoWasm.Transaction.new(tx.body(), witnessSet, tx.auxiliary_data());
         // console.log('======', draftTx.to_json());
-        return utils.fixTxExuintByEvaluate(protocolParams, draftTx.to_hex(),totalScriptSize, evaluateFn, signFn);
+        const costModlstmp = CardanoWasm.Costmdls.new();
+        costModlstmp.insert(CardanoWasm.Language.new_plutus_v2(), costModesLib.get(CardanoWasm.Language.new_plutus_v2()));
+        return utils.fixTxExuintByEvaluate(protocolParams, costModlstmp, draftTx.to_hex(), totalScriptSize, evaluateFn, signFn);
     }
 
     static setMetaData(txBuilder, rawMetaData) {
@@ -611,10 +607,7 @@ class NFTTreasuryCheckScript {
             exUnitsMint
         );
 
-        const buf = Buffer.from(checkTokenScriptRef.script['plutus:v2'], 'hex');
-        const cborHex = cbor.encode(buf, 'buffer');
-        const scriptTmp = CardanoWasm.PlutusScript.from_bytes_v2(cborHex);
-        const scriptSize = scriptTmp.bytes().byteLength;
+        const { script: scriptTmp, scriptSize } = utils.plutusScriptFromScriptRef(checkTokenScriptRef);
 
         let mint_witnes = CardanoWasm.MintWitness.new_plutus_script(
             CardanoWasm.PlutusScriptSource.new_ref_input(scriptTmp.hash()
@@ -663,10 +656,7 @@ class NFTTreasuryCheckScript {
 
             const scriptHash = utils.addressToPkhOrScriptHash(utxo.address);
 
-            const buf = Buffer.from(scriptRef.script['plutus:v2'], 'hex');
-            const cborHex = cbor.encode(buf, 'buffer');
-            const scriptTmp = CardanoWasm.PlutusScript.from_bytes_v2(cborHex);
-            const scriptSize = scriptTmp.bytes().byteLength;
+            const { script: scriptTmp, scriptSize } = utils.plutusScriptFromScriptRef(scriptRef);
             const witness = CardanoWasm.PlutusWitness.new_with_ref_without_datum(
                 CardanoWasm.PlutusScriptSource.new_ref_input(CardanoWasm.ScriptHash.from_hex(scriptHash)
                     , scriptRefInput, scriptTmp.language_version(), scriptSize)
@@ -796,10 +786,7 @@ class NFTMappingTokenScript {
 
         const policyToBurn = burnValueCrosschain.multiasset().keys().get(0);
 
-        const buf = Buffer.from(scriptRef.script['plutus:v2'], 'hex');
-        const cborHex = cbor.encode(buf, 'buffer');
-        const scriptTmp = CardanoWasm.PlutusScript.from_bytes_v2(cborHex);
-        const scriptSize = scriptTmp.bytes().byteLength;
+        const { script: scriptTmp, scriptSize } = utils.plutusScriptFromScriptRef(scriptRef);
         totalScriptSize += scriptSize;
 
         const mint_plutus_script_source = CardanoWasm.PlutusScriptSource.new_ref_input(
@@ -873,7 +860,9 @@ class NFTMappingTokenScript {
         // return CardanoWasm.Transaction.new(tx.body(), witnessSet, tx.auxiliary_data());
         const draftTx = CardanoWasm.Transaction.new(tx.body(), witnessSet, tx.auxiliary_data());
         // console.log('======', draftTx.to_json());
-        return utils.fixTxExuintByEvaluate(protocolParams, draftTx.to_hex(),totalScriptSize, evaluateFn, signFn);
+        const costModlstmp = CardanoWasm.Costmdls.new();
+        costModlstmp.insert(CardanoWasm.Language.new_plutus_v2(), costModesLib.get(CardanoWasm.Language.new_plutus_v2()));
+        return utils.fixTxExuintByEvaluate(protocolParams, costModlstmp,draftTx.to_hex(), totalScriptSize, evaluateFn, signFn);
     }
 
     static async mint(protocolParams, utxosForFee, utxoForCollateral, scriptRef, mintCheckScriptRef, groupNFTUtxo, mintCheckUtxo, redeemProof, nftRefHolder, changeAddress, evaluateFn, signFn, ttl, rawMetaData) {
@@ -892,10 +881,8 @@ class NFTMappingTokenScript {
             txBuilder.add_regular_input(from, input, value);
         }
 
-        const buf = Buffer.from(scriptRef.script['plutus:v2'], 'hex');
-        const cborHex = cbor.encode(buf, 'buffer');
-
-        const NFTMappingTokenScriptFromCBor = CardanoWasm.PlutusScript.from_bytes_v2(cborHex);
+        const { script: NFTMappingTokenScriptFromCBor, scriptSize } = utils.plutusScriptFromScriptRef(scriptRef);
+        totalScriptSize += scriptSize;
         const scriptHash = NFTMappingTokenScriptFromCBor.hash();
         // console.log('scriptHash:',scriptHash.to_hex());
         //step2: construct mint
@@ -904,8 +891,6 @@ class NFTMappingTokenScript {
             CardanoWasm.TransactionHash.from_hex(scriptRef.txHash)
             , scriptRef.index
         );
-        const scriptSize = NFTMappingTokenScriptFromCBor.bytes().byteLength
-        totalScriptSize += scriptSize;
 
         const mint_plutus_script_source = CardanoWasm.PlutusScriptSource.new_ref_input(scriptHash
             , scriptRefInput, NFTMappingTokenScriptFromCBor.language_version(), scriptSize);
@@ -944,10 +929,7 @@ class NFTMappingTokenScript {
 
         const mintCheckScriptHash = CardanoWasm.ScriptHash.from_hex(utils.addressToPkhOrScriptHash(mintCheckUtxo.address));
 
-        const buf2 = Buffer.from(mintCheckScriptRef.script['plutus:v2'], 'hex');
-        const cborHex2 = cbor.encode(buf2, 'buffer');
-        const scriptTmp2 = CardanoWasm.PlutusScript.from_bytes_v2(cborHex2);
-        const scriptSize2 = scriptTmp2.bytes().byteLength;
+        const { script: scriptTmp2, scriptSize: scriptSize2 } = utils.plutusScriptFromScriptRef(mintCheckScriptRef);
         totalScriptSize += scriptSize2;
 
         const mint_check_plutus_script_source = CardanoWasm.PlutusScriptSource.new_ref_input(mintCheckScriptHash, mintCheckRefInput
@@ -1092,7 +1074,9 @@ class NFTMappingTokenScript {
 
         const draftTx = CardanoWasm.Transaction.new(tx.body(), witnessSet, tx.auxiliary_data());
         // console.log('======', draftTx.to_json());
-        return utils.fixTxExuintByEvaluate(protocolParams, draftTx.to_hex(),totalScriptSize, evaluateFn, signFn);
+        const costModlstmp = CardanoWasm.Costmdls.new();
+        costModlstmp.insert(CardanoWasm.Language.new_plutus_v2(), costModesLib.get(CardanoWasm.Language.new_plutus_v2()));
+        return utils.fixTxExuintByEvaluate(protocolParams,costModlstmp, draftTx.to_hex(), totalScriptSize, evaluateFn, signFn);
         // return draftTx;
     }
 
@@ -1323,11 +1307,7 @@ class NFTMintCheckScript {
             exUnitsMint
         );
 
-        const buf2 = Buffer.from(checkTokenScriptRef.script['plutus:v2'], 'hex');
-        const cborHex2 = cbor.encode(buf2, 'buffer');
-        const scriptTmp = CardanoWasm.PlutusScript.from_bytes_v2(cborHex2);
-        const scriptSize = scriptTmp.bytes().byteLength;
-
+        const { script: scriptTmp, scriptSize } = utils.plutusScriptFromScriptRef(checkTokenScriptRef);
         let mint_witnes = CardanoWasm.MintWitness.new_plutus_script(
             CardanoWasm.PlutusScriptSource.new_ref_input(scriptTmp.hash(), checkTokenScriptRefInput
                 , scriptTmp.language_version(), scriptSize)
@@ -1377,14 +1357,11 @@ class NFTMintCheckScript {
             const scriptHash = utils.addressToPkhOrScriptHash(utxo.address);
 
 
-            const buf2 = Buffer.from(scriptRef.script['plutus:v2'], 'hex');
-            const cborHex2 = cbor.encode(buf2, 'buffer');
-            const scriptTmp = CardanoWasm.PlutusScript.from_bytes_v2(cborHex2);
-            const scriptSize = scriptTmp.bytes().byteLength;
+            const { script: scriptTmp, scriptSize } = utils.plutusScriptFromScriptRef(scriptRef);
 
             const witness = CardanoWasm.PlutusWitness.new_with_ref_without_datum(
                 CardanoWasm.PlutusScriptSource.new_ref_input(
-                    CardanoWasm.ScriptHash.from_hex(scriptHash), scriptRefInput, scriptTmp.language_version(),scriptSize)
+                    CardanoWasm.ScriptHash.from_hex(scriptHash), scriptRefInput, scriptTmp.language_version(), scriptSize)
                 , redeemer
             )
 
@@ -1514,13 +1491,9 @@ class CheckTokenScriptBase {
             exUnits
         );
 
-        const buf2 = Buffer.from(scriptRef.script['plutus:v2'], 'hex');
-            const cborHex2 = cbor.encode(buf2, 'buffer');
-            const scriptTmp = CardanoWasm.PlutusScript.from_bytes_v2(cborHex2);
-            const scriptSize = scriptTmp.bytes().byteLength;
-
+        const { script: scriptTmp, scriptSize } = utils.plutusScriptFromScriptRef(scriptRef);
         let mint_witnes = CardanoWasm.MintWitness.new_plutus_script(
-            CardanoWasm.PlutusScriptSource.new_ref_input(scriptTmp.hash(), scriptRefInput, scriptTmp.language_version(),scriptSize)
+            CardanoWasm.PlutusScriptSource.new_ref_input(scriptTmp.hash(), scriptRefInput, scriptTmp.language_version(), scriptSize)
             , redeemer);
         const assetName = CardanoWasm.AssetName.new(Buffer.from(this.tokenName()));
         // console.log(assetName.to_json());
@@ -1785,13 +1758,13 @@ function init(network = true) {
     const nftRefHoderPlutus = currentPlutus.nftRefHoderPlutus
 
 
-    nftTreasuryScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(nftTreasuryPlutus.cborHex, 'hex'));
-    nftTreasuryCheckScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(nftTreasuryCheckPlutus.cborHex, 'hex'));
-    nftMappingTokenScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(nftMappingTokenPlutus.cborHex, 'hex'));
-    nftMintCheckScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(nftMintCheckPlutus.cborHex, 'hex'));
-    nftTreasuryCheckTokenScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(nftTreasuryCheckTokenPlutus.cborHex, 'hex'));
-    nftMintCheckTokenScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(nftMintCheckTokenPlutus.cborHex, 'hex'));
-    nftRefHolderScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(nftRefHoderPlutus.cborHex, 'hex'));
+    nftTreasuryScript = utils.plutusScriptFromPlutusObj(nftTreasuryPlutus);
+    nftTreasuryCheckScript = utils.plutusScriptFromPlutusObj(nftTreasuryCheckPlutus);
+    nftMappingTokenScript = utils.plutusScriptFromPlutusObj(nftMappingTokenPlutus);
+    nftMintCheckScript = utils.plutusScriptFromPlutusObj(nftMintCheckPlutus);
+    nftTreasuryCheckTokenScript = utils.plutusScriptFromPlutusObj(nftTreasuryCheckTokenPlutus);
+    nftMintCheckTokenScript = utils.plutusScriptFromPlutusObj(nftMintCheckTokenPlutus);
+    nftRefHolderScript = utils.plutusScriptFromPlutusObj(nftRefHoderPlutus);
 }
 
 

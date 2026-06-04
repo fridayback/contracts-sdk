@@ -18,9 +18,9 @@ const AdminNFTName = 'AdminNFTCoin';
 const GroupInfoTokenName = 'GroupInfoTokenCoin';
 
 
-const DEV = false;
+const PRD = true;
 function getCostModels(protocolParams) {
-    if (DEV) {
+    if (PRD) {
         return protocolParams.costModels;
     } else {
         return CardanoWasm.TxBuilderConstants.plutus_conway_cost_models();
@@ -840,7 +840,12 @@ class GroupInfoNFTHolderScript {
         // txBuilder.set_script_data_hash(CardanoWasm.ScriptDataHash.from_hex('b1cd410aed7aa533596e7dc9b14838f3c858879ee5d3910d6fd419226248d25e'));
 
         const tmp = CardanoWasm.Costmdls.new();
-        tmp.insert(CardanoWasm.Language.new_plutus_v2(), costModesLib.get(CardanoWasm.Language.new_plutus_v2()));
+        if(GroupInfoNFTHolderScript.script().language_version().kind() == 1){
+            tmp.insert(CardanoWasm.Language.new_plutus_v2(), costModesLib.get(CardanoWasm.Language.new_plutus_v2()));
+        }
+        if(GroupInfoNFTHolderScript.script().language_version().kind() == 2){
+            tmp.insert(CardanoWasm.Language.new_plutus_v3(), costModesLib.get(CardanoWasm.Language.new_plutus_v3()));
+        }
         const redeemers = CardanoWasm.Redeemers.new();
         const datumList = CardanoWasm.PlutusList.new();
         datumList.add(groupInfoDatum);
@@ -1224,10 +1229,7 @@ class AdminNFTHolderScript {
 
             const scriptRefInput = CardanoWasm.TransactionInput.new(CardanoWasm.TransactionHash.from_bytes(Buffer.from(adminNftHoldRefScript.txHash, 'hex')), adminNftHoldRefScript.index);
 
-            const buf2 = Buffer.from(adminNftHoldRefScript.script['plutus:v2'], 'hex');
-            const cborHex2 = cbor.encode(buf2, 'buffer');
-            const scriptTmp = CardanoWasm.PlutusScript.from_bytes_v2(cborHex2);
-            const scriptSize = scriptTmp.bytes().byteLength;
+            const { script: scriptTmp, scriptSize } = utils.plutusScriptFromScriptRef(adminNftHoldRefScript);
 
             const witness = CardanoWasm.PlutusWitness.new_with_ref_without_datum(
                 CardanoWasm.PlutusScriptSource.new_ref_input(scriptTmp.hash(), scriptRefInput, scriptTmp.language_version(),scriptSize)
@@ -2258,10 +2260,7 @@ class StakeCheckScript {
             const value = utils.funValue(utxoToSpend.value);
             const scriptRefInput = CardanoWasm.TransactionInput.new(CardanoWasm.TransactionHash.from_bytes(Buffer.from(stakeCheckRefScript.txHash, 'hex')), stakeCheckRefScript.index);
 
-            const buf = Buffer.from(stakeCheckRefScript.script['plutus:v2'], 'hex');
-            const cborHex = cbor.encode(buf, 'buffer');
-            const scriptTmp = CardanoWasm.PlutusScript.from_bytes_v2(cborHex);
-            const scriptSize = scriptTmp.bytes().byteLength;
+            const { script: scriptTmp, scriptSize } = utils.plutusScriptFromScriptRef(stakeCheckRefScript);
 
             const witness = CardanoWasm.PlutusWitness.new_with_ref(
                 CardanoWasm.PlutusScriptSource.new_ref_input(StakeCheckScript.script().hash(), scriptRefInput, scriptTmp.language_version(),scriptSize)
@@ -2299,12 +2298,12 @@ function init(network = true) {
     // if(storemanStakeScript) storemanStakeScript.free();
     // if(stakeCheckScript) stakeCheckScript.free();
 
-    groupNFTScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(groupInfoTokenPlutus.cborHex, 'hex'));
-    groupNFTHolderScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(groupInfoTokenHolderPlutus.cborHex, 'hex'));
-    adminNFTScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(adminNFTPlutus.cborHex, 'hex'));
-    adminNFTHolderScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(adminNFTHolderPlutus.cborHex, 'hex'));
-    storemanStakeScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(storemanStakePlutus.cborHex, 'hex'));
-    stakeCheckScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(stakeCheckPlutus.cborHex, 'hex'));
+    groupNFTScript = utils.plutusScriptFromPlutusObj(groupInfoTokenPlutus);
+    groupNFTHolderScript = utils.plutusScriptFromPlutusObj(groupInfoTokenHolderPlutus);
+    adminNFTScript = utils.plutusScriptFromPlutusObj(adminNFTPlutus);
+    adminNFTHolderScript = utils.plutusScriptFromPlutusObj(adminNFTHolderPlutus);
+    storemanStakeScript = utils.plutusScriptFromPlutusObj(storemanStakePlutus);
+    stakeCheckScript = utils.plutusScriptFromPlutusObj(stakeCheckPlutus);
 
     // console.log("groupNFTScript:",groupNFTScript.hash().to_hex());
     // console.log("groupNFTHolderScript:",groupNFTHolderScript.hash().to_hex());

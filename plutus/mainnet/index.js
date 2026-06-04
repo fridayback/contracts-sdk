@@ -29,6 +29,7 @@ const outboundTokenPlutus = require('./outbound-token.json');
 const outboundHolderPlutus = require('./outbound-holder.json');
 const inboundCheckTokenPlutus = require('./inbound-check-token.json');
 const inboundCheckPlutus = require('./inbound-check.json');
+const inboundTokenPlutus = require('./inbound-token.json');
 
 module.exports = {
     groupInfoTokenPlutus
@@ -56,4 +57,5 @@ module.exports = {
     , outboundHolderPlutus
     , inboundCheckTokenPlutus
     , inboundCheckPlutus
+    , inboundTokenPlutus
 }

@@ -65,8 +65,8 @@ class ContractSdk {
             this.allScriptRefUtxo = await ogmiosUtils.getUtxo(this.scriptRefOwnerAddr);
         }
         const ref = this.allScriptRefUtxo.find(o => {
-            if(!o.script || !o.script['plutus:v2']) return false;
-            return script.to_hex().indexOf(o.script['plutus:v2']) >= 0
+            if(!o.script || (!o.script['plutus:v2'] && !o.script['plutus:v3'])) return false;
+            return script.to_hex().indexOf(o.script['plutus:v2']) >= 0 || script.to_hex().indexOf(o.script['plutus:v3']) >= 0
         });
         return ref;
     }

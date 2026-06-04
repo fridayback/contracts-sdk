@@ -1,4 +1,5 @@
 const CardanoWasm = require('@emurgo/cardano-serialization-lib-nodejs');
+const cbor = require('cbor-sync');
 
 module.exports.initProtocolParams = function (protocolParams, interVia = 'ogmios') {
     if (interVia == 'ogmios') {
@@ -445,7 +446,7 @@ module.exports.addressToHashs = function (addrStr) {
     return ret;
 }
 
-module.exports.fixTxExuintByEvaluate = async function (protocolParams, txRaw, scriptSize, evaluate, signTx, gasMutipl = 1) {
+module.exports.fixTxExuintByEvaluate = async function (protocolParams,costModesLib, txRaw, scriptSize, evaluate, signTx, gasMutipl = 1) {
     const exUnitEVA = await evaluate(txRaw);
     // console.log(exUnitEVA);
     if (!exUnitEVA) throw 'evalaute failed';
@@ -628,10 +629,11 @@ module.exports.fixTxExuintByEvaluate = async function (protocolParams, txRaw, sc
     if (tx.body().required_signers())
         newBody.set_required_signers(tx.body().required_signers());
 
-    const costModesLib = CardanoWasm.TxBuilderConstants.plutus_conway_cost_models();//protocolParams.costModels;//getCostModels(protocolParams);
-    const tmp = CardanoWasm.Costmdls.new();
-    tmp.insert(CardanoWasm.Language.new_plutus_v2(), costModesLib.get(CardanoWasm.Language.new_plutus_v2()));
-    const hash = CardanoWasm.hash_script_data(redeemersNew, tmp,tx.witness_set().plutus_data());
+    // const costModesLib = protocolParams.costModels;//getCostModels(protocolParams);//CardanoWasm.TxBuilderConstants.plutus_conway_cost_models();//
+    // const tmp = CardanoWasm.Costmdls.new();
+
+    // tmp.insert(CardanoWasm.Language.new_plutus_v3(), costModesLib.get(CardanoWasm.Language.new_plutus_v3()));
+    const hash = CardanoWasm.hash_script_data(redeemersNew, costModesLib,tx.witness_set().plutus_data());
     // console.log('hash:',hash.to_hex());
     newBody.set_script_data_hash(hash);
     if (tx.body().update()) newBody.set_update(tx.body().update());
@@ -782,4 +784,51 @@ module.exports.genBizDatum = function (inTokenId,outTokenId, minimumReceive) {
             ls
         )
     ).to_hex()
+}
+
+/**
+ * Create a PlutusScript from a plutus config object.
+ * Uses the `type` field ("PlutusScriptV2" or "PlutusScriptV3") to determine the language version.
+ * @param {object} plutusObj - { type: "PlutusScriptV2"|"PlutusScriptV3", cborHex: string }
+ * @returns {CardanoWasm.PlutusScript}
+ */
+module.exports.plutusScriptFromPlutusObj = function (plutusObj) {
+    const bytes = Buffer.from(plutusObj.cborHex, 'hex');
+    switch (plutusObj.type) {
+        case 'PlutusScriptV3':
+            return CardanoWasm.PlutusScript.from_bytes_v3(bytes);
+        case 'PlutusScriptV2':
+            return CardanoWasm.PlutusScript.from_bytes_v2(bytes);
+        default:
+            throw new Error(`Unknown plutus script type: ${plutusObj.type}`);
+    }
+}
+
+/**
+ * Create a PlutusScript from a scriptRef/UTXO object.
+ * Auto-detects the version from script['plutus:v2'] or script['plutus:v3'].
+ * Performs the Buffer.from → cbor.encode → from_bytes_vX flow.
+ * @param {object} scriptRef - { script: { 'plutus:v2'?: string, 'plutus:v3'?: string }, ... }
+ * @returns {{ script: CardanoWasm.PlutusScript, scriptSize: number }}
+ */
+module.exports.plutusScriptFromScriptRef = function (scriptRef) {
+    let hexBytes, scriptType;
+
+    if (scriptRef.script && scriptRef.script['plutus:v3']) {
+        hexBytes = scriptRef.script['plutus:v3'];
+        scriptType = 'PlutusScriptV3';
+    } else if (scriptRef.script && scriptRef.script['plutus:v2']) {
+        hexBytes = scriptRef.script['plutus:v2'];
+        scriptType = 'PlutusScriptV2';
+    } else {
+        throw new Error('scriptRef does not contain plutus:v2 or plutus:v3 key');
+    }
+
+    const buf = Buffer.from(hexBytes, 'hex');
+    const cborHex = cbor.encode(buf, 'buffer');
+    const script = this.plutusScriptFromPlutusObj({ type: scriptType, cborHex: cborHex.toString('hex') });
+    return {
+        script: script,
+        scriptSize: script.bytes().byteLength
+    };
 }

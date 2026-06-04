@@ -18,12 +18,12 @@ let outboundTokenScript;
 let outboundHolderScript;
 
 
-const DEV = true;
+const PRD = true;
 function getCostModels(protocolParams) {
-    if (DEV) {
-        return CardanoWasm.TxBuilderConstants.plutus_conway_cost_models();//protocolParams.costModels;
+    if (PRD) {
+        return protocolParams.costModels;
     } else {
-        return CardanoWasm.TxBuilderConstants.plutus_vasil_cost_models();
+        return CardanoWasm.TxBuilderConstants.plutus_conway_cost_models();
     }
 }
 class OutboundHolderScript {
@@ -101,10 +101,7 @@ class InboundTokenScript {
 
         const policyToBurn = burnValueCrosschain.multiasset().keys().get(0);
 
-        const buf = Buffer.from(scriptRef.script['plutus:v2'], 'hex');
-        const cborHex = cbor.encode(buf, 'buffer');
-        const scriptTmp = CardanoWasm.PlutusScript.from_bytes_v2(cborHex);
-        const scriptSize = scriptTmp.bytes().byteLength;
+        const { script: scriptTmp, scriptSize } = utils.plutusScriptFromScriptRef(scriptRef);
         totalScriptSize += scriptSize;
 
         const mint_plutus_script_source = CardanoWasm.PlutusScriptSource.new_ref_input(
@@ -178,7 +175,9 @@ class InboundTokenScript {
         // return CardanoWasm.Transaction.new(tx.body(), witnessSet, tx.auxiliary_data());
         const draftTx = CardanoWasm.Transaction.new(tx.body(), witnessSet, tx.auxiliary_data());
         // console.log('======', draftTx.to_json());
-        return utils.fixTxExuintByEvaluate(protocolParams, draftTx.to_hex(), totalScriptSize, evaluateFn, signFn);
+        const tmp = CardanoWasm.Costmdls.new();
+        tmp.insert(CardanoWasm.Language.new_plutus_v3(), costModesLib.get(CardanoWasm.Language.new_plutus_v3())); 
+        return utils.fixTxExuintByEvaluate(protocolParams, tmp,draftTx.to_hex(), totalScriptSize, evaluateFn, signFn);
     }
     //redeemProof = {
     // proof:{
@@ -204,10 +203,8 @@ class InboundTokenScript {
             txBuilder.add_regular_input(from, input, value);
         }
 
-        const buf = Buffer.from(scriptRef.script['plutus:v2'], 'hex');
-        const cborHex = cbor.encode(buf, 'buffer');
-
-        const InboundTokenScriptFromCBor = CardanoWasm.PlutusScript.from_bytes_v2(cborHex);
+        const { script: InboundTokenScriptFromCBor, scriptSize } = utils.plutusScriptFromScriptRef(scriptRef);
+        totalScriptSize += scriptSize;
         const scriptHash = InboundTokenScriptFromCBor.hash();
         // console.log('scriptHash:',scriptHash.to_hex());
         //step2: construct mint
@@ -216,8 +213,6 @@ class InboundTokenScript {
             CardanoWasm.TransactionHash.from_hex(scriptRef.txHash)
             , scriptRef.index
         );
-        const scriptSize = InboundTokenScriptFromCBor.bytes().byteLength
-        totalScriptSize += scriptSize;
 
         const mint_plutus_script_source = CardanoWasm.PlutusScriptSource.new_ref_input(scriptHash
             , scriptRefInput, InboundTokenScriptFromCBor.language_version(), scriptSize);
@@ -248,10 +243,7 @@ class InboundTokenScript {
 
         const mintCheckScriptHash = CardanoWasm.ScriptHash.from_hex(utils.addressToPkhOrScriptHash(mintCheckUtxo.address));
 
-        const buf2 = Buffer.from(mintCheckScriptRef.script['plutus:v2'], 'hex');
-        const cborHex2 = cbor.encode(buf2, 'buffer');
-        const scriptTmp2 = CardanoWasm.PlutusScript.from_bytes_v2(cborHex2);
-        const scriptSize2 = scriptTmp2.bytes().byteLength;
+        const { script: scriptTmp2, scriptSize: scriptSize2 } = utils.plutusScriptFromScriptRef(mintCheckScriptRef);
         totalScriptSize += scriptSize2;
 
         const mint_check_plutus_script_source = CardanoWasm.PlutusScriptSource.new_ref_input(mintCheckScriptHash, mintCheckRefInput
@@ -347,8 +339,11 @@ class InboundTokenScript {
         // return CardanoWasm.Transaction.new(tx.body(), witnessSet, tx.auxiliary_data());
 
         const draftTx = CardanoWasm.Transaction.new(tx.body(), witnessSet, tx.auxiliary_data());
-        // console.log('======', draftTx.to_json());
-        return utils.fixTxExuintByEvaluate(protocolParams, draftTx.to_hex(), totalScriptSize, evaluateFn, signFn);
+        //console.log('======', draftTx.to_json());
+        //console.log(draftTx.to_hex());
+        const tmp = CardanoWasm.Costmdls.new();
+        tmp.insert(CardanoWasm.Language.new_plutus_v3(), costModesLib.get(CardanoWasm.Language.new_plutus_v3())); 
+        return utils.fixTxExuintByEvaluate(protocolParams, tmp,draftTx.to_hex(), totalScriptSize, evaluateFn, signFn);
         // return draftTx;
     }
 
@@ -356,7 +351,7 @@ class InboundTokenScript {
 
 class InboundCheckScript {
     // constructor(scriptCbor) {
-    //     this.nftTreasuryCheckScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(scriptCbor, 'hex'));
+    //     this.nftTreasuryCheckScript = CardanoWasm.PlutusScript.from_bytes_v3(Buffer.from(scriptCbor, 'hex'));
     // }
 
     static script() {
@@ -379,7 +374,7 @@ class InboundCheckScript {
         ls.add(plutusdata.toPlutusDataCrossMsgData(proof.crossMsgData));
         ls.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(proof.ttl + '')));
         ls.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(proof.mode + '')));
-        ls.add(plutusdata.toPlutusDataTxOutRef(proof.nonce.txHash, proof.nonce.index));
+        ls.add(plutusdata.toPlutusDataOutputReference_aiken(proof.nonce.txHash, proof.nonce.index));
 
         return CardanoWasm.PlutusData.new_constr_plutus_data(
             CardanoWasm.ConstrPlutusData.new(
@@ -436,7 +431,7 @@ class InboundCheckScript {
         const ttl = proofCbor.get(1).as_integer().as_int().as_i32();
         const mode = proofCbor.get(2).as_integer().as_int().as_i32();
 
-        const { txHash, index } = plutusdata.txOutRefFromCbor(proofCbor.get(3).as_constr_plutus_data().to_hex());
+        const { txHash, index } = plutusdata.OutputReference_aikenFromCbor(proofCbor.get(3).as_constr_plutus_data().to_hex());
 
         return { proof: { crossMsgData, mode, ttl, nonce: { txHash, index } }, signature };
     }
@@ -515,10 +510,7 @@ class InboundCheckScript {
             exUnitsMint
         );
 
-        const buf2 = Buffer.from(checkTokenScriptRef.script['plutus:v2'], 'hex');
-        const cborHex2 = cbor.encode(buf2, 'buffer');
-        const scriptTmp = CardanoWasm.PlutusScript.from_bytes_v2(cborHex2);
-        const scriptSize = scriptTmp.bytes().byteLength;
+        const { script: scriptTmp, scriptSize } = utils.plutusScriptFromScriptRef(checkTokenScriptRef);
 
         let mint_witnes = CardanoWasm.MintWitness.new_plutus_script(
             CardanoWasm.PlutusScriptSource.new_ref_input(scriptTmp.hash(), checkTokenScriptRefInput
@@ -569,10 +561,7 @@ class InboundCheckScript {
             const scriptHash = utils.addressToPkhOrScriptHash(utxo.address);
 
 
-            const buf2 = Buffer.from(scriptRef.script['plutus:v2'], 'hex');
-            const cborHex2 = cbor.encode(buf2, 'buffer');
-            const scriptTmp = CardanoWasm.PlutusScript.from_bytes_v2(cborHex2);
-            const scriptSize = scriptTmp.bytes().byteLength;
+            const { script: scriptTmp, scriptSize } = utils.plutusScriptFromScriptRef(scriptRef);
 
             const witness = CardanoWasm.PlutusWitness.new_with_ref_without_datum(
                 CardanoWasm.PlutusScriptSource.new_ref_input(
@@ -666,10 +655,8 @@ class OutboundTokenScript {
         }
         if(callBackFn) await callBackFn(txInputBuilder);
 
-        const buf = Buffer.from(scriptRef.script['plutus:v2'], 'hex');
-        const cborHex = cbor.encode(buf, 'buffer');
-
-        const outboundTokenScriptFromCBor = CardanoWasm.PlutusScript.from_bytes_v2(cborHex);
+        const { script: outboundTokenScriptFromCBor, scriptSize } = utils.plutusScriptFromScriptRef(scriptRef);
+        totalScriptSize += scriptSize;
         const scriptHash = outboundTokenScriptFromCBor.hash();
         // console.log('scriptHash:',scriptHash.to_hex());
         //step2: construct mint
@@ -678,8 +665,6 @@ class OutboundTokenScript {
             CardanoWasm.TransactionHash.from_hex(scriptRef.txHash)
             , scriptRef.index
         );
-        const scriptSize = outboundTokenScriptFromCBor.bytes().byteLength
-        totalScriptSize += scriptSize;
 
         const mint_plutus_script_source = CardanoWasm.PlutusScriptSource.new_ref_input(scriptHash
             , scriptRefInput, outboundTokenScriptFromCBor.language_version(), scriptSize);
@@ -763,8 +748,10 @@ class OutboundTokenScript {
 
 
         const draftTx = CardanoWasm.Transaction.new(tx.body(), witnessSet, tx.auxiliary_data());
-        // console.log('======', draftTx.to_json());
-        return utils.fixTxExuintByEvaluate(protocolParams, draftTx.to_hex(), totalScriptSize, evaluateFn, signFn);
+        //console.log('======', draftTx.to_json());
+        const tmp = CardanoWasm.Costmdls.new();
+        tmp.insert(CardanoWasm.Language.new_plutus_v3(), costModesLib.get(CardanoWasm.Language.new_plutus_v3())); 
+        return utils.fixTxExuintByEvaluate(protocolParams, tmp,draftTx.to_hex(), totalScriptSize, evaluateFn, signFn);
         // return draftTx;
     }
 
@@ -847,10 +834,8 @@ class CheckTokenScriptBase {
             exUnits
         );
 
-        const buf2 = Buffer.from(scriptRef.script['plutus:v2'], 'hex');
-        const cborHex2 = cbor.encode(buf2, 'buffer');
-        const scriptTmp = CardanoWasm.PlutusScript.from_bytes_v2(cborHex2);
-        const scriptSize = scriptTmp.bytes().byteLength;
+        const { script: scriptTmp, scriptSize } = utils.plutusScriptFromScriptRef(scriptRef);
+        //console.log('scriptTmp:', scriptTmp.language_version().to_json(), scriptTmp.hash().to_hex());
 
         let mint_witnes = CardanoWasm.MintWitness.new_plutus_script(
             CardanoWasm.PlutusScriptSource.new_ref_input(scriptTmp.hash(), scriptRefInput, scriptTmp.language_version(), scriptSize)
@@ -971,11 +956,11 @@ function init(network = true) {
     const inboundCheckTokenPlutus = currentPlutus.inboundCheckTokenPlutus;
     const outboundTokenPlutus = currentPlutus.outboundTokenPlutus;
     const outboundHolderPlutus = currentPlutus.outboundHolderPlutus;
-    inboundTokenScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(inboundTokenPlutus.cborHex, 'hex'));
-    inboundCheckScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(inboundCheckPlutus.cborHex, 'hex'));
-    inboundCheckTokenScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(inboundCheckTokenPlutus.cborHex, 'hex'));
-    outboundTokenScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(outboundTokenPlutus.cborHex, 'hex'));
-    outboundHolderScript = CardanoWasm.PlutusScript.from_bytes_v2(Buffer.from(outboundHolderPlutus.cborHex, 'hex'));
+    inboundTokenScript = utils.plutusScriptFromPlutusObj(inboundTokenPlutus);
+    inboundCheckScript = utils.plutusScriptFromPlutusObj(inboundCheckPlutus);
+    inboundCheckTokenScript = utils.plutusScriptFromPlutusObj(inboundCheckTokenPlutus);
+    outboundTokenScript = utils.plutusScriptFromPlutusObj(outboundTokenPlutus);
+    outboundHolderScript = utils.plutusScriptFromPlutusObj(outboundHolderPlutus);
 }
 
 
