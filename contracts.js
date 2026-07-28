@@ -543,12 +543,10 @@ class TreasuryScript {
         return signedTx;
     }
     static caculateRedeemDataHash(redeemData) {
-
-        const padding = function (str) {
-            let paddingLength = Math.ceil(str.length / 2) * 2 - str.length;
-            if (paddingLength <= 0) return str;
-            else return '0' + str;
-        }
+        // Builds CBOR-serialized ConstrPlutusData with 14 fields matching
+        // TreasuryCheckHashData in types.ak / TreasuryCheckProofHashData in TreasuryCheck.hs.
+        // This replaces the old hex-string concatenation approach which had no
+        // field delimiters and was vulnerable to boundary-ambiguity attacks.
 
         const { pkhPay, pkhStk } = utils.addressToHashs(redeemData.to);
 
@@ -556,14 +554,6 @@ class TreasuryScript {
         if (redeemData.tokenId != '') {
             [policy_id, tokenName] = redeemData.tokenId.split('.');
         }
-        const amount = padding(new BigNumber(redeemData.amount).toString(16));//CardanoWasm.BigInt.from_str(redeemData.amount + '').to_hex();
-        const adaAmount = padding(new BigNumber(redeemData.adaAmount).toString(16));//CardanoWasm.BigInt.from_str(redeemData.adaAmount + '').to_hex();
-        const nonceHash = redeemData.txHash;
-        const nonceIndex = padding(new BigNumber(redeemData.index).toString(16));//CardanoWasm.BigInt.from_str(redeemData.nonce.index + '').to_hex();;
-        const mode = padding(new BigNumber(redeemData.mode).toString(16));
-        const txType = padding(new BigNumber(redeemData.txType).toString(16));
-        const ttl = padding(new BigNumber(redeemData.ttl).toString(16));
-        const outputCount = padding(new BigNumber(redeemData.outputCount).toString(16));
 
         const addressType = utils.addressType(redeemData.to);
         let userData = '';
@@ -572,14 +562,33 @@ class TreasuryScript {
             userData = Buffer.from(redeemData.userData, 'hex').toString('hex');//Just check useData don't have prefix '0x'
         }
 
-        const rawData = pkhPay + (pkhStk ? pkhStk : '') + policy_id + tokenName + amount + adaAmount + nonceHash + nonceIndex + mode + redeemData.uniqueId + txType + ttl + outputCount + userData;
+        // Build PlutusData Constr 0 with 14 fields in canonical order
+        const fields = CardanoWasm.PlutusList.new();
+        fields.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(pkhPay, 'hex')));
+        fields.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(pkhStk ? pkhStk : '', 'hex')));
+        fields.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(policy_id, 'hex')));
+        fields.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(tokenName, 'hex')));
+        fields.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(redeemData.amount + '')));
+        fields.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(redeemData.adaAmount + '')));
+        fields.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(redeemData.txHash, 'hex')));
+        fields.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(redeemData.index + '')));
+        fields.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(redeemData.mode + '')));
+        fields.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(redeemData.uniqueId, 'hex')));
+        fields.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(redeemData.txType + '')));
+        fields.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(redeemData.ttl + '')));
+        fields.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(redeemData.outputCount + '')));
+        fields.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(userData, 'hex')));
+
+        const constrData = CardanoWasm.ConstrPlutusData.new(
+            CardanoWasm.BigNum.from_str('0'),
+            fields
+        );
+        const hashCBOR = CardanoWasm.PlutusData.new_constr_plutus_data(constrData).to_hex();
 
         const shaObj = new jsSHA("SHA3-256", "UINT8ARRAY"/*,{encoding:"UTF8"}*/)
-        shaObj.update(Buffer.from(rawData, 'hex'));
+        shaObj.update(Buffer.from(hashCBOR, 'hex'));
         const dataHash = shaObj.getHash("HEX");
 
-        // const { signature } = await signFn(dataHash);
-        // return { ...redeemData, signature, hash: dataHash };
         return dataHash;
     }
 
@@ -1047,7 +1056,7 @@ class TreasuryScript {
 
 
 
-        // txBuilder.add_required_signer(CardanoWasm.Ed25519KeyHash.from_hex(groupInfo[contractMgr.GroupNFT.BalanceWorker]));
+        txBuilder.add_required_signer(CardanoWasm.Ed25519KeyHash.from_hex(groupInfo[contractMgr.GroupNFT.BalanceWorker]));
 
         const minFee = txBuilder.min_fee();
         // console.log('minFee:', minFee.to_str());
@@ -1367,7 +1376,7 @@ class TreasuryScript {
 
 
 
-        // txBuilder.add_required_signer(CardanoWasm.Ed25519KeyHash.from_hex(groupInfo[contractMgr.GroupNFT.BalanceWorker]));
+        txBuilder.add_required_signer(CardanoWasm.Ed25519KeyHash.from_hex(groupInfo[contractMgr.GroupNFT.BalanceWorker]));
 
         const minFee = txBuilder.min_fee();
         // console.log('minFee:', minFee.to_str());
@@ -1560,7 +1569,7 @@ class MappingTokenScript {
 
     static async mintWithoutEvaluate(protocolParams, utxosForFee, utxoForCollateral, scriptRef, mintCheckScriptRef, groupNFTUtxo, mintCheckUtxo, redeemProof, changeAddress, signFn, ttl, rawMetaData) {
         const txBuilder = utils.initTxBuilder(protocolParams);
-
+        const groupInfo = contractMgr.GroupNFT.groupInfoFromDatum(groupNFTUtxo.datum);
         for (let i = 0; i < utxosForFee.length; i++) {
             const utxoForFee = utxosForFee[i];
             const txId = CardanoWasm.TransactionHash.from_bytes(Buffer.from(utxoForFee.txHash, 'hex'));
@@ -1641,7 +1650,7 @@ class MappingTokenScript {
             txCollateralInputBuilder.add_regular_input(from, input, value);
         }
 
-        const params = contractMgr.GroupNFT.groupInfoFromDatum(groupNFTUtxo.datum);
+        // const params = contractMgr.GroupNFT.groupInfoFromDatum(groupNFTUtxo.datum);
         // const requiredSigner = params[contractMgr.GroupNFT.BalanceWorker];
 
 
@@ -1685,7 +1694,7 @@ class MappingTokenScript {
         txBuilder.set_mint_builder(mintBuilder);
         txBuilder.add_reference_input(groupNFTRefInput);
         txBuilder.add_plutus_script_input(mintCheckWitness, mintCheckInput, utils.funValue(mintCheckUtxo.value));
-        // txBuilder.add_required_signer(CardanoWasm.Ed25519KeyHash.from_hex(requiredSigner));
+        txBuilder.add_required_signer(CardanoWasm.Ed25519KeyHash.from_hex(groupInfo[contractMgr.GroupNFT.BalanceWorker]));
         txBuilder.add_output(outputOfMint);
         txBuilder.add_output(outputMintCheckChange);
 
@@ -1724,6 +1733,7 @@ class MappingTokenScript {
         // return signedTx;
         const exUnitEVA = await evaluateTxFn(signedTx.to_hex());
         if (!exUnitEVA) throw 'evaluate failed';
+        const groupInfo = contractMgr.GroupNFT.groupInfoFromDatum(groupNFTUtxo.datum);
         let total_ex_mem = 0;
         let total_ex_cpu = 0;
         const gasMutipl = 1;
@@ -1831,8 +1841,9 @@ class MappingTokenScript {
             txCollateralInputBuilder.add_regular_input(from, input, value);
         }
 
-        const params = contractMgr.GroupNFT.groupInfoFromDatum(groupNFTUtxo.datum);
+        // const params = contractMgr.GroupNFT.groupInfoFromDatum(groupNFTUtxo.datum);
         // const requiredSigner = params[contractMgr.GroupNFT.BalanceWorker];
+        txBuilder.add_required_signer(CardanoWasm.Ed25519KeyHash.from_hex(groupInfo[contractMgr.GroupNFT.BalanceWorker]));
 
 
         const toAddr = CardanoWasm.Address.from_bech32(redeemProof.to);
@@ -1935,11 +1946,10 @@ class MintCheckScript {
     }
 
     static caculateRedeemDataHash(redeemData) {
-        const padding = function (str) {
-            let paddingLength = Math.ceil(str.length / 2) * 2 - str.length;
-            if (paddingLength <= 0) return str;
-            else return '0' + str;
-        }
+        // Builds CBOR-serialized ConstrPlutusData with 11 fields matching
+        // MintCheckHashData in types.ak / MintCheckProofHashData in MintCheck.hs.
+        // This replaces the old hex-string concatenation approach which had no
+        // field delimiters and was vulnerable to boundary-ambiguity attacks.
 
         const { pkhPay, pkhStk } = utils.addressToHashs(redeemData.to);
 
@@ -1947,12 +1957,6 @@ class MintCheckScript {
         if (redeemData.tokenId != '') {
             [policy_id, tokenName] = redeemData.tokenId.split('.');
         }
-        const amount = padding(new BigNumber(redeemData.amount).toString(16));//CardanoWasm.BigInt.from_str(redeemData.amount + '').to_hex();
-        // const adaAmount = padding(new BigNumber(redeemData.adaAmount).toString(16));//CardanoWasm.BigInt.from_str(redeemData.adaAmount + '').to_hex();
-        const nonceHash = redeemData.txHash;
-        const nonceIndex = padding(new BigNumber(redeemData.index).toString(16));//CardanoWasm.BigInt.from_str(redeemData.nonce.index + '').to_hex();;
-        const mode = padding(new BigNumber(redeemData.mode).toString(16));
-        const ttl = padding(new BigNumber(redeemData.ttl).toString(16));
 
         let userData = '';
         const addressType = utils.addressType(redeemData.to);
@@ -1960,14 +1964,31 @@ class MintCheckScript {
             if (redeemData.userData === undefined) throw 'userData required in caculateRedeemDataHash()';
             userData = Buffer.from(redeemData.userData, 'hex').toString('hex');//Just check useData don't have prefix '0x'
         }
-        const rawData = pkhPay + (pkhStk ? pkhStk : '') + policy_id + tokenName + amount + nonceHash + nonceIndex + mode + redeemData.uniqueId + ttl + userData;
+
+        // Build PlutusData Constr 0 with 11 fields in canonical order
+        const fields = CardanoWasm.PlutusList.new();
+        fields.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(pkhPay, 'hex')));
+        fields.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(pkhStk ? pkhStk : '', 'hex')));
+        fields.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(policy_id, 'hex')));
+        fields.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(tokenName, 'hex')));
+        fields.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(redeemData.amount + '')));
+        fields.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(redeemData.txHash, 'hex')));
+        fields.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(redeemData.index + '')));
+        fields.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(redeemData.mode + '')));
+        fields.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(redeemData.uniqueId, 'hex')));
+        fields.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(redeemData.ttl + '')));
+        fields.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(userData, 'hex')));
+
+        const constrData = CardanoWasm.ConstrPlutusData.new(
+            CardanoWasm.BigNum.from_str('0'),
+            fields
+        );
+        const hashCBOR = CardanoWasm.PlutusData.new_constr_plutus_data(constrData).to_hex();
 
         const shaObj = new jsSHA("SHA3-256", "UINT8ARRAY"/*,{encoding:"UTF8"}*/)
-        shaObj.update(Buffer.from(rawData, 'hex'));
+        shaObj.update(Buffer.from(hashCBOR, 'hex'));
         const dataHash = shaObj.getHash("HEX");
 
-        // const { signature } = await signFn(dataHash);
-        // return { ...redeemData, signature, hash: dataHash };
         return dataHash;
     }
 
