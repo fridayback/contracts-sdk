@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": ["Read", "Bash"],
+    "deny": []
+  },
+  "hooks": {
+    "UserPromptSubmit": [],
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [{"type": "command", "command": "python3 .claude/guards/check_path.py"}]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [{"type": "command", "command": "python3 .claude/guards/check_path.py"}]
+      }
+    ],
+    "PostToolUse": [],
+    "Stop": [],
+    "SessionStart": []
+  }
+}
