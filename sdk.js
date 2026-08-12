@@ -207,6 +207,54 @@ class ContractSdk {
                     , newOutboundHolder, changeAddr, undefined, signFn, exUnitTx);
                 break;
             }
+            case contractsMgr.GroupNFT.PendingGPKParam: {
+                // setParam: { newGpk: 'hex'(32B 压缩公钥), activationTime: ms } — oracle 预置 pending GPK
+                signedTx = await contractsMgr.GroupInfoNFTHolderScript.setPendingGpk(
+                    protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
+                    , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
+                    , { newGpk: setParam.newGpk, activationTime: setParam.activationTime }, changeAddr, undefined, signFn, exUnitTx);
+                break;
+            }
+            case contractsMgr.GroupNFT.GPK: {
+                // setParam: { mode: 'activate' } → oracle 激活 pending
+                //          { mode: 'immediate', newGpk } → admin 立即生效（newGpk 为 32B 压缩公钥 hex）
+                if (setParam.mode == 'activate') {
+                    signedTx = await contractsMgr.GroupInfoNFTHolderScript.activateGpk(
+                        protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
+                        , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
+                        , changeAddr, undefined, signFn, exUnitTx);
+                } else {
+                    signedTx = await contractsMgr.GroupInfoNFTHolderScript.setGpkImmediate(
+                        protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
+                        , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
+                        , setParam.newGpk, changeAddr, undefined, signFn, exUnitTx);
+                }
+                break;
+            }
+            case contractsMgr.GroupNFT.CrossLimit: {
+                // setParam: [{ policy: 'hex', name: 'hex', limit: Number }] — admin 更新限额表
+                signedTx = await contractsMgr.GroupInfoNFTHolderScript.setCrossLimit(
+                    protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
+                    , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
+                    , setParam, changeAddr, undefined, signFn, exUnitTx);
+                break;
+            }
+            case contractsMgr.GroupNFT.HaltWorker: {
+                const newHaltWorker = utils.addressToPkhOrScriptHash(setParam);
+                signedTx = await contractsMgr.GroupInfoNFTHolderScript.setHaltWorker(
+                    protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
+                    , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
+                    , newHaltWorker, changeAddr, undefined, signFn, exUnitTx);
+                break;
+            }
+            case contractsMgr.GroupNFT.HaltStatus: {
+                // setParam: 0（unhalt，admin 签名）或 1（halt，haltworker 签名）
+                signedTx = await contractsMgr.GroupInfoNFTHolderScript.setHaltStatus(
+                    protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
+                    , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
+                    , setParam, changeAddr, undefined, signFn, exUnitTx);
+                break;
+            }
             case contractsMgr.GroupNFT.Version: {
                 const newDatum = CardanoWasm.PlutusData.from_hex(setParam.datum);
                 const newOwner = utils.addressToPkhOrScriptHash(setParam.owner);
@@ -327,6 +375,44 @@ class ContractSdk {
 
     async setInboundCheckVH(newInboundCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
         return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.InboundCheckVH, newInboundCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
+    }
+
+    // ===== msg-gpk-activate 分支新增方法 =====
+
+    // oracle 预置 pending GPK（action==14）。newGpk 为 32B 压缩公钥 hex，activationTime 为毫秒时间戳。
+    async setGpkPending(newGpk, activationTime, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.PendingGPKParam
+            , { newGpk, activationTime }, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
+    }
+
+    // oracle 激活 pending GPK（action==2，oracle 签名路径）。
+    async activateGpk(mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.GPK
+            , { mode: 'activate' }, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
+    }
+
+    // admin 立即设置 GPK（action==2，admin NFT 签名路径，清 pending）。
+    async setGpkImmediate(newGpk, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.GPK
+            , { mode: 'immediate', newGpk }, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
+    }
+
+    // admin 更新跨链限额表（action==15）。limits: [{ policy, name, limit }]
+    async setCrossLimit(limits, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.CrossLimit
+            , limits, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
+    }
+
+    // admin 更新 halt worker（action==16）。newHaltWorker 为 bech32 地址。
+    async setHaltWorker(newHaltWorker, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.HaltWorker
+            , newHaltWorker, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
+    }
+
+    // 切换 halt 状态（action==17）。status: 0=unhalt（admin 签名），1=halt（haltworker 签名）。
+    async setHaltStatus(status, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.HaltStatus
+            , status, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
     }
 
     async addSignature(tx, signFn = undefined) {

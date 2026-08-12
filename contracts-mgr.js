@@ -171,6 +171,11 @@ class GroupNFT {
     static NFTMintCheckVH = 11;
     static OutboundHolderVH = 12;
     static InboundCheckVH = 13;
+    // msg-gpk-activate 分支新增参数索引（aiken ParamType 枚举，声明顺序即索引）
+    static PendingGPKParam = 14;   // PendingGPK {new_gpk, activation_time} 的 CBOR 编码
+    static CrossLimit = 15;        // List<AssetLimit> 的 CBOR 编码
+    static HaltWorker = 16;        // halt worker pubkey hash（bytes）
+    static HaltStatus = 17;        // pack_integer 编码的 Int：0=正常，1=halted
 
     static script() {
         return groupNFTScript;
@@ -203,13 +208,31 @@ class GroupNFT {
         params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[GroupNFT.NFTRefHolderVH + ''], 'hex')));
         params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[GroupNFT.NFTTreasuryCheckVH + ''], 'hex')));
         params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[GroupNFT.NFTMintCheckVH + ''], 'hex')));
-        // OutboundHolderVH | InboundCheckVH
-        if(Object.keys(groupInfoParams).length == 14){
-            params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[GroupNFT.OutboundHolderVH + ''], 'hex')));
-            params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[GroupNFT.InboundCheckVH + ''], 'hex')));
+        // OutboundHolderVH(12) | InboundCheckVH(13) | PendingGPKParam(14) | CrossLimit(15)
+        // | HaltWorker(16) | HaltStatus(17)
+        // 连续写入：遇第一个 undefined 即停止，保证参数索引不空洞错位。
+        // 兼容旧配置：不传 12-17 时保持 12 项长度。
+        // 防御（#2 修复）：若出现索引空洞（中间缺失但后续更高索引有值），禁止静默丢参——
+        // 抛错提示先通过 action==0 升级 datum 到完整配置，避免产生静默 no-op 交易。
+        for (let i = GroupNFT.OutboundHolderVH; i <= GroupNFT.HaltStatus; i++) {
+            const v = groupInfoParams[i + ''];
+            if (v === undefined) {
+                // 空洞检测：后续任何索引有值 → 报错，不静默 break
+                let hasHigher = false;
+                for (let j = i + 1; j <= GroupNFT.HaltStatus; j++) {
+                    if (groupInfoParams[j + ''] !== undefined) { hasHigher = true; break; }
+                }
+                if (hasHigher) {
+                    throw 'GroupInfo params hole at index ' + i
+                        + ': cannot write index ' + i + '-'
+                        + GroupNFT.HaltStatus + ' non-contiguously. '
+                        + 'First upgrade datum via action==0 to full 18-item config, '
+                        + 'or provide all intermediate params.';
+                }
+                break;
+            }
+            params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(v, 'hex')));
         }
-        // params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[GroupNFT.OutboundHolderVH + ''], 'hex')));
-        // params.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(groupInfoParams[GroupNFT.InboundCheckVH + ''], 'hex')));
 
         ls.add(CardanoWasm.PlutusData.new_list(params));
 
@@ -233,6 +256,134 @@ class GroupNFT {
         }
 
         return ret;
+    }
+
+    // =========================================================================
+    // msg-gpk-activate 分支新增参数的编解码工具
+    // 编码格式与 Aiken 严格对齐：
+    //   - PendingGPK {new_gpk, activation_time} -> Constr 0 [Bytes, Int]
+    //     （Aiken cbor.serialise 输出 d8799f<bytes><int>ff）
+    //   - List<AssetLimit> -> 空列表 Constr 0 []；[x,..xs] -> Constr 1 [x, rest]
+    //   - HaltStatus 用 pack_integer：0->[0x00]；正数->最小大端；负数->0x80前缀+abs
+    // =========================================================================
+
+    // PendingGPK -> hex（cbor.serialise 等价物）
+    static encodePendingGpk(pending) {
+        // pending: { newGpk: 'hex', activationTime: Number|string }
+        const ls = CardanoWasm.PlutusList.new();
+        ls.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(pending.newGpk, 'hex')));
+        ls.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(pending.activationTime + '')));
+        const constr = CardanoWasm.ConstrPlutusData.new(CardanoWasm.BigNum.from_str('0'), ls);
+        return Buffer.from(CardanoWasm.PlutusData.new_constr_plutus_data(constr).to_bytes()).toString('hex');
+    }
+
+    // hex -> PendingGPK；解码失败返回 null
+    // 注意：activationTime 若超过 Number.MAX_SAFE_INTEGER（2^53-1）会丢精度；
+    // 实际使用为毫秒时间戳（~1.7e12 << 9e15），安全。如需更大整数请改用字符串。
+    static decodePendingGpk(hexBytes) {
+        try {
+            const data = CardanoWasm.PlutusData.from_hex(hexBytes);
+            const c = data.as_constr_plutus_data();
+            if (c.alternative().to_str() != '0') return null;
+            const fields = c.data();
+            if (fields.len() != 2) return null;
+            const activationTimeStr = fields.get(1).as_integer().to_str();
+            if (BigInt(activationTimeStr) > BigInt(Number.MAX_SAFE_INTEGER)) {
+                return {
+                    newGpk: Buffer.from(fields.get(0).as_bytes()).toString('hex'),
+                    activationTime: activationTimeStr, // 超安全整数 → 返回字符串防精度丢失
+                };
+            }
+            return {
+                newGpk: Buffer.from(fields.get(0).as_bytes()).toString('hex'),
+                activationTime: Number(activationTimeStr),
+            };
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // [{policy, name, limit}] -> hex（Aiken List<AssetLimit> ToData）
+    static encodeAssetLimits(limits) {
+        const build = (xs) => {
+            if (xs.length == 0) {
+                return CardanoWasm.PlutusData.new_constr_plutus_data(
+                    CardanoWasm.ConstrPlutusData.new(CardanoWasm.BigNum.from_str('0'), CardanoWasm.PlutusList.new()));
+            }
+            const [head, ...tail] = xs;
+            const ls = CardanoWasm.PlutusList.new();
+            const fields = CardanoWasm.PlutusList.new();
+            fields.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(head.policy, 'hex')));
+            fields.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(head.name, 'hex')));
+            fields.add(CardanoWasm.PlutusData.new_integer(CardanoWasm.BigInt.from_str(head.limit + '')));
+            ls.add(CardanoWasm.PlutusData.new_constr_plutus_data(
+                CardanoWasm.ConstrPlutusData.new(CardanoWasm.BigNum.from_str('0'), fields)));
+            ls.add(build(tail));
+            return CardanoWasm.PlutusData.new_constr_plutus_data(
+                CardanoWasm.ConstrPlutusData.new(CardanoWasm.BigNum.from_str('1'), ls));
+        };
+        return Buffer.from(build(limits).to_bytes()).toString('hex');
+    }
+
+    // hex -> [{policy, name, limit}]；解码失败返回 null
+    // 注意：limit 若超过 Number.MAX_SAFE_INTEGER（2^53-1）会丢精度；
+    // 合约侧 Int 为任意精度，超限时返回字符串（与 decodePendingGpk 的 activationTime 处理一致）。
+    static decodeAssetLimits(hexBytes) {
+        const parse = (data) => {
+            const c = data.as_constr_plutus_data();
+            const alt = c.alternative().to_str();
+            if (alt == '0') return [];          // 空列表
+            if (alt != '1') return null;         // 畸形
+            const ls = c.data();
+            if (ls.len() != 2) return null;
+            const headData = ls.get(0);
+            const restData = ls.get(1);
+            const hc = headData.as_constr_plutus_data();
+            if (hc.alternative().to_str() != '0') return null;
+            const hf = hc.data();
+            if (hf.len() != 3) return null;
+            const rest = parse(restData);
+            if (rest === null) return null;
+            const limitStr = hf.get(2).as_integer().to_str();
+            return [{
+                policy: Buffer.from(hf.get(0).as_bytes()).toString('hex'),
+                name: Buffer.from(hf.get(1).as_bytes()).toString('hex'),
+                limit: BigInt(limitStr) > BigInt(Number.MAX_SAFE_INTEGER) ? limitStr : Number(limitStr),
+            }, ...rest];
+        };
+        try {
+            return parse(CardanoWasm.PlutusData.from_hex(hexBytes));
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // 整数 -> hex（对齐 Aiken pack_integer）
+    static packInteger(n) {
+        const big = BigInt(n);
+        if (big == 0n) return '00';
+        let abs = big < 0n ? -big : big;
+        let bytes = [];
+        while (abs > 0n) {
+            bytes.unshift(Number(abs & 0xffn));
+            abs >>= 8n;
+        }
+        const hex = bytes.map(b => b.toString(16).padStart(2, '0')).join('');
+        return big < 0n ? '80' + hex : hex;
+    }
+
+    // hex -> 整数（对齐 Aiken unpack_integer；空字节防御性返回 0）
+    // 注意：超出 Number.MAX_SAFE_INTEGER 会丢精度（halt status 0/1 不受影响）；
+    // 需要更大整数时请改用 decodePendingGpk 返回的字符串字段。
+    static unpackInteger(hexBytes) {
+        if (!hexBytes || hexBytes.length == 0) return 0;
+        const bytes = Buffer.from(hexBytes, 'hex');
+        let acc = 0n;
+        const start = bytes[0] == 0x80 ? 1 : 0;
+        for (let i = start; i < bytes.length; i++) {
+            acc = acc * 256n + BigInt(bytes[i]);
+        }
+        return bytes[0] == 0x80 ? -Number(acc) : Number(acc);
     }
 
     static async mint(protocolParams, utxosForFee, utxoForCollateral, scriptRef, groupInfoParams, changeAddress, ttl, signFn){
@@ -565,13 +716,118 @@ class GroupInfoNFTHolderScript {
     //     return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, adminInfo, utxosToSpend, scriptRef, params, changeAddress, ttl, signFn, GroupNFT.Admin, adminInfo);
     // }
 
-    static async switchGroup(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, adminInfo, newGpk, changeAddress, ttl, signFn, exUnitTx) {
-        // const datum = CardanoWasm.PlutusData.from_hex(utxosToSpend[0].datum);
+    // switchGroup: GPK 写入。msg-gpk-activate 合约已无 oracle 直改路径，
+    // GPK 轮换必须走 setPendingGpk(14) → activateGpk(2) 两阶段。
+    // mode 参数仅保留默认 'admin'（委托 setGpkImmediate 立即生效并清 pending），
+    // 传其他值（如 'oracle'）直接抛错。
+    static async switchGroup(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, adminInfo, newGpk, changeAddress, ttl, signFn, exUnitTx, mode = 'admin') {
+        if (mode !== 'admin') {
+            throw 'switchGroup mode="' + mode + '" is not supported: msg-gpk-activate contract has no oracle direct-GPK-write path. Use setPendingGpk(action 14) then activateGpk(action 2) for delayed GPK rotation.';
+        }
+        // 委托 setGpkImmediate（admin 路径，立即生效并清 pending）
+        return await GroupInfoNFTHolderScript.setGpkImmediate(
+            protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef,
+            adminInfo, newGpk, changeAddress, ttl, signFn, exUnitTx);
+    }
+
+    // msg-gpk-activate 分支新增方法 ------------------------------------------
+
+    // 前置检查：向 params[12-17] 写入新索引前，确认旧配置已含 0..13（14 项）
+    // 或完整 0..17（18 项）。旧 12 项配置（0..11）直接写 14+ 会产生索引空洞，
+    // 被 genGroupInfoDatum 拒绝——这里提前给出清晰错误，避免到 validator 深处才暴露。
+    static ensureParamsExtensible(params) {
+        for (let i = GroupNFT.OutboundHolderVH; i < GroupNFT.PendingGPKParam; i++) {
+            if (params[i + ''] === undefined) {
+                throw 'GroupInfo datum is legacy ' + GroupNFT.OutboundHolderVH
+                    + '-item config (missing index ' + i + '). '
+                    + 'New msg-gpk-activate params (14-17) require 18-item datum. '
+                    + 'First upgrade via action==0 (setVersion with full 18-item datum).';
+            }
+        }
+    }
+
+    // action==14：oracle 预置 pending GPK（check_gpk_preset）。
+    // pending: { newGpk: 'hex', activationTime: ms }
+    static async setPendingGpk(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, adminInfo, pending, changeAddress, ttl, signFn, exUnitTx) {
+        let params = GroupNFT.groupInfoFromDatum(utxoToSpend.datum);
+        GroupInfoNFTHolderScript.ensureParamsExtensible(params);
+        // 客户端预检：合约 check_gpk_preset 要求 new_gpk != 当前 GPK（否则 fail-closed），提前报错提升 UX
+        if (pending.newGpk === params[GroupNFT.GPK + '']) {
+            throw 'setPendingGpk: newGpk equals current GPK at params[2] — no real change to stage';
+        }
+        params[GroupNFT.PendingGPKParam] = GroupNFT.encodePendingGpk(pending);
+        // oracle 签名路径：不 push admin NFT，validator 内用 OracleWorker 作为 required signer
+        const adminInfoFinal = Object.assign({}, adminInfo, { forceAdmin: false });
+
+        return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, params, changeAddress, ttl, signFn, GroupNFT.PendingGPKParam, adminInfoFinal, exUnitTx);
+    }
+
+    // action==2 oracle 路径：激活 pending GPK（check_gpk_activate）。
+    // 读取链上 params[14] 的 PendingGPK，写 params[2]=new_gpk，清 params[14]。
+    static async activateGpk(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, adminInfo, changeAddress, ttl, signFn, exUnitTx) {
+        let params = GroupNFT.groupInfoFromDatum(utxoToSpend.datum);
+        const pending = GroupNFT.decodePendingGpk(params[GroupNFT.PendingGPKParam + '']);
+        if (!pending) {
+            throw 'no valid pending GPK at params[14]';
+        }
+        params[GroupNFT.GPK] = pending.newGpk;
+        params[GroupNFT.PendingGPKParam] = ''; // 清 pending（空字节）
+        const adminInfoFinal = Object.assign({}, adminInfo, { forceAdmin: false });
+
+        return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, params, changeAddress, ttl, signFn, GroupNFT.GPK, adminInfoFinal, exUnitTx);
+    }
+
+    // action==2 admin 立即生效：直接写 GPK 并清 pending（check_gpk_admin_set）。
+    // 合约允许 out[14] 为 None（旧 12 项配置），故仅当 params 已有 14 时清空。
+    static async setGpkImmediate(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, adminInfo, newGpk, changeAddress, ttl, signFn, exUnitTx) {
         let params = GroupNFT.groupInfoFromDatum(utxoToSpend.datum);
         params[GroupNFT.GPK] = newGpk;
+        if (params[GroupNFT.PendingGPKParam + ''] !== undefined) {
+            params[GroupNFT.PendingGPKParam] = ''; // 清 pending（空字节）
+        }
+        const adminInfoFinal = Object.assign({}, adminInfo, { forceAdmin: true });
 
-        return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, params, changeAddress, ttl, signFn, GroupNFT.GPK, adminInfo, exUnitTx);
+        return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, params, changeAddress, ttl, signFn, GroupNFT.GPK, adminInfoFinal, exUnitTx);
+    }
 
+    // action==15：admin 更新 CrossLimit（check_cross_limits 配置表）。
+    // limits: [{ policy: 'hex', name: 'hex', limit: Number }]
+    static async setCrossLimit(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, adminInfo, limits, changeAddress, ttl, signFn, exUnitTx) {
+        let params = GroupNFT.groupInfoFromDatum(utxoToSpend.datum);
+        GroupInfoNFTHolderScript.ensureParamsExtensible(params);
+        params[GroupNFT.CrossLimit] = GroupNFT.encodeAssetLimits(limits);
+        const adminInfoFinal = Object.assign({}, adminInfo, { forceAdmin: true });
+
+        return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, params, changeAddress, ttl, signFn, GroupNFT.CrossLimit, adminInfoFinal, exUnitTx);
+    }
+
+    // action==16：admin 更新 HaltWorker（pubkey hash bytes）
+    static async setHaltWorker(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, adminInfo, newHaltWorkerPK, changeAddress, ttl, signFn, exUnitTx) {
+        let params = GroupNFT.groupInfoFromDatum(utxoToSpend.datum);
+        GroupInfoNFTHolderScript.ensureParamsExtensible(params);
+        params[GroupNFT.HaltWorker] = newHaltWorkerPK;
+        const adminInfoFinal = Object.assign({}, adminInfo, { forceAdmin: true });
+
+        return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, params, changeAddress, ttl, signFn, GroupNFT.HaltWorker, adminInfoFinal, exUnitTx);
+    }
+
+    // action==17：切换 halt 状态。status: 0=正常, 1=halted。
+    //   halt（0→1）由 haltworker 签名；unhalt（1→0）由 admin NFT 签名。
+    static async setHaltStatus(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, adminInfo, status, changeAddress, ttl, signFn, exUnitTx) {
+        if (status !== 0 && status !== 1) {
+            throw 'invalid halt status: ' + status + ' (must be 0=unhalt or 1=halt)';
+        }
+        let params = GroupNFT.groupInfoFromDatum(utxoToSpend.datum);
+        GroupInfoNFTHolderScript.ensureParamsExtensible(params);
+        params[GroupNFT.HaltStatus] = GroupNFT.packInteger(status);
+        const isHalt = status == 1;
+        // haltworker 路径：validator 内用 params[16] HaltWorker 作为 required signer
+        const adminInfoFinal = Object.assign({}, adminInfo, {
+            forceAdmin: !isHalt,
+            haltWorkerSign: isHalt,
+        });
+
+        return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, params, changeAddress, ttl, signFn, GroupNFT.HaltStatus, adminInfoFinal, exUnitTx);
     }
 
     static async setBalanceWorker(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, adminInfo, newBalanceWorkerPK, changeAddress, ttl, signFn, exUnitTx) {
@@ -694,14 +950,24 @@ class GroupInfoNFTHolderScript {
 
 
     static async validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, groupInfoParams, changeAddress, ttl, signFn, action
-        , adminInfo = { forceAdmin: false, adminNftUtxo: undefined, adminNftHoldRefScript: undefined, mustSignBy: undefined }, exUnitTx) {//forceAdmin = false
+        , adminInfo = { forceAdmin: false, adminNftUtxo: undefined, adminNftHoldRefScript: undefined, mustSignBy: undefined, haltWorkerSign: undefined }, exUnitTx) {//forceAdmin = false
+        // adminInfo 字段说明（msg-gpk-activate 新增）：
+        //   haltWorkerSign: 仅 action==17 halt（0→1）时置 true，validator 内用 params[16]
+        //     HaltWorker 作为 required signer。缺省/undefined 时回退 admin NFT 路径
+        //     （安全：check_halt_direction 仅允许 admin 1→0 unhalt，0→1 halt 会 fail-closed）。
+        //   新方法（setPendingGpk/activateGpk/setGpkImmediate/setCrossLimit/setHaltWorker/
+        //     setHaltStatus）均已正确设置；仅直接裸调 validator 的旧调用方需注意。     
 
         let inputs_arr = [];
         for (let i = 0; i < utxosForFee.length; i++) {
             inputs_arr.push(utxosForFee[i].txHash + '#' + utxosForFee[i].index);
         }
         inputs_arr.push(utxoToSpend.txHash + '#' + utxoToSpend.index);
-        if (action != GroupNFT.GPK || adminInfo.forceAdmin) {
+        // msg-gpk-activate: oracle 路径（GPK=2 oracle 激活 / PendingGPKParam=14 oracle 预置）
+        // 与 haltworker 路径（HaltStatus=17 haltworker halt）不 push admin NFT 输入
+        const isOracleAction = action == GroupNFT.GPK || action == GroupNFT.PendingGPKParam;
+        const isHaltByWorker = action == GroupNFT.HaltStatus && adminInfo.haltWorkerSign;
+        if (!((isOracleAction || isHaltByWorker) && !adminInfo.forceAdmin)) {
             inputs_arr.push(adminInfo.adminNftUtxo.txHash + '#' + adminInfo.adminNftUtxo.index);
         }
         inputs_arr.sort();
@@ -785,6 +1051,11 @@ class GroupInfoNFTHolderScript {
 
             if (action == GroupNFT.GPK && !adminInfo.forceAdmin) {
                 adminPKHForSign = params[GroupNFT.OracleWorker];
+            } else if (action == GroupNFT.PendingGPKParam && !adminInfo.forceAdmin) {
+                adminPKHForSign = params[GroupNFT.OracleWorker];
+            } else if (action == GroupNFT.HaltStatus && adminInfo.haltWorkerSign) {
+                // haltworker 0→1（halt）：由 params[16] HaltWorker 签名，不走 admin NFT
+                adminPKHForSign = params[GroupNFT.HaltWorker];
             }
             const witness = CardanoWasm.PlutusWitness.new_with_ref(
                 CardanoWasm.PlutusScriptSource.new_ref_input(GroupInfoNFTHolderScript.script().hash(), scriptRefInput, GroupInfoNFTHolderScript.script().language_version(),GroupInfoNFTHolderScript.script().bytes().byteLength*1)
