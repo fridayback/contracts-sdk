@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>contracts-sdk — aiken-enhance 分支修改报告</title>
+<style>
+  :root {
+    --bg: #f6f8fa;
+    --card: #ffffff;
+    --border: #d0d7de;
+    --text: #1f2328;
+    --muted: #59636e;
+    --accent: #0969da;
+    --green: #1a7f37;
+    --red: #cf222e;
+    --amber: #9a6700;
+    --code-bg: #eff1f3;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.6; padding: 32px 16px;
+  }
+  .container { max-width: 960px; margin: 0 auto; }
+  header {
+    background: linear-gradient(135deg, #0d2b45, #0969da);
+    color: #fff; border-radius: 12px; padding: 32px 36px; margin-bottom: 24px;
+  }
+  header h1 { font-size: 26px; margin-bottom: 8px; }
+  header .sub { opacity: .85; font-size: 14px; }
+  header .badges { margin-top: 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .badge {
+    display: inline-block; padding: 3px 12px; border-radius: 999px; font-size: 12px; font-weight: 600;
+    background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.3);
+  }
+  .badge.green { background: rgba(35,200,90,.25); }
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 24px 28px; margin-bottom: 20px;
+  }
+  .card h2 { font-size: 18px; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .card h3 { font-size: 15px; margin: 16px 0 8px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  th { background: var(--code-bg); font-weight: 600; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  code {
+    background: var(--code-bg); padding: 1px 6px; border-radius: 4px;
+    font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px;
+  }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 4px; margin-right: 6px; }
+  .tag.new { background: #dafbe1; color: var(--green); }
+  .tag.mod { background: #fff8c5; color: var(--amber); }
+  .tag.doc { background: #ddf4ff; color: var(--accent); }
+  .tag.reason { background: #ffebe9; color: var(--red); }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 6px; }
+  .ok { color: var(--green); font-weight: 600; }
+  .warn { color: var(--amber); font-weight: 600; }
+  .err { color: var(--red); font-weight: 600; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+  .stat { background: var(--code-bg); border-radius: 8px; padding: 14px 16px; text-align: center; }
+  .stat .v { font-size: 24px; font-weight: 700; color: var(--accent); }
+  .stat .l { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .commit { font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px; background: var(--code-bg); border-radius: 6px; padding: 10px 14px; margin-bottom: 8px; }
+  .commit .hash { color: var(--accent); font-weight: 600; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; margin-top: 24px; }
+  @media (max-width: 640px) {
+    header { padding: 22px 20px; }
+    .card { padding: 18px 16px; }
+    th, td { padding: 6px 6px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>contracts-sdk — aiken-enhance 分支修改报告</h1>
+  <div class="sub">基于 1.5.0 创建，实现 cardano-plutus2aiken msg-gpk-activate 分支合约的 SDK 增量支持</div>
+  <div class="badges">
+    <span class="badge">分支：aiken-enhance</span>
+    <span class="badge">基础：1.5.0</span>
+    <span class="badge green">三审闭环 ✅</span>
+    <span class="badge">日期：2026-08-12</span>
+  </div>
+</header>
+
+<div class="card">
+  <h2>📌 修改目的与背景</h2>
+  <p>上游合约仓库 <code>cardano-plutus2aiken</code> 的 <code>msg-gpk-activate</code> 分支（相对 alpha 分支）新增了三类跨链桥治理能力：</p>
+  <ul>
+    <li><b>GPK 激活延迟（PendingGPK）</b>：oracle 先预置 pending GPK（params[14]，CBOR 编码），24h 延迟后由 oracle 激活；admin 可立即生效并清 pending，防止 GPK 轮换被单点瞬间控制。</li>
+    <li><b>跨链限额（CrossLimit）</b>：params[15] 存 CBOR 编码的资产限额表，跨链转账受额度约束。</li>
+    <li><b>暂停（halt）</b>：params[16] HaltWorker / params[17] HaltStatus；haltworker 可 0→1 暂停桥，admin 可 1→0 恢复。</li>
+  </ul>
+  <p style="margin-top:10px">本分支在不冲击现有 SDK 框架的前提下（不改既有方法签名、不替换合约字节码 json），增量实现上述功能的 SDK 支持。</p>
+</div>
+
+<div class="card">
+  <h2>📊 修改规模总览</h2>
+  <div class="grid">
+    <div class="stat"><div class="v">13</div><div class="l">涉及文件</div></div>
+    <div class="stat"><div class="v">+813</div><div class="l">新增行数</div></div>
+    <div class="stat"><div class="v">−13</div><div class="l">删除行数</div></div>
+    <div class="stat"><div class="v">2</div><div class="l">提交数</div></div>
+  </div>
+  <table style="margin-top:16px">
+    <thead><tr><th>提交</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>bc40359</code></td><td>feat(aiken-enhance): msg-gpk-activate SDK 增量支持（三审闭环）</td></tr>
+      <tr><td><code>8971181</code></td><td>docs: COST_LOG 记账 — aiken-enhance 三审+Codex 成本</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>🗂️ 修改文件清单与原因</h2>
+  <table>
+    <thead><tr><th>文件</th><th class="num">+行</th><th class="num">−行</th><th>类型</th><th>修改原因</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><code>contracts-mgr.js</code></td><td class="num">283</td><td class="num">12</td><td><span class="tag mod">核心代码</span></td>
+        <td>
+          <b>GroupNFT 常量扩展</b>：追加 <code>PendingGPKParam=14</code> / <code>CrossLimit=15</code> / <code>HaltWorker=16</code> / <code>HaltStatus=17</code>，与合约 ParamType 枚举索引对齐。<br>
+          <b>genGroupInfoDatum 连续写入</b>：12-17 参数支持连续写入，遇索引空洞抛错（防静默 no-op 交易）。<br>
+          <b>编解码工具</b>：<code>encodePendingGpk</code>/<code>decodePendingGpk</code>、<code>encodeAssetLimits</code>/<code>decodeAssetLimits</code>、<code>packInteger</code>/<code>unpackInteger</code>，编码与 Aiken <code>serialise_data</code>/<code>pack_integer</code> 逐字节对齐。<br>
+          <b>6 个新方法</b>：<code>setPendingGpk</code>(14)、<code>activateGpk</code>(2 oracle)、<code>setGpkImmediate</code>(2 admin)、<code>setCrossLimit</code>(15)、<code>setHaltWorker</code>(16)、<code>setHaltStatus</code>(17)。<br>
+          <b>validator() 签名扩展</b>：action 14 走 oracle 签名、action 17 haltworker 签名路径、admin NFT 输入条件调整。<br>
+          <b>switchGroup 适配</b>：msg-gpk-activate 合约已无 oracle 直改路径，oracle 模式改为显式抛错并引导走两阶段。
+        </td>
+      </tr>
+      <tr>
+        <td><code>sdk.js</code></td><td class="num">86</td><td class="num">0</td><td><span class="tag mod">核心代码</span></td>
+        <td><code>invokeGroupInfoHolder</code> 新增 14-17 case（GPK case 支持 activate/immediate 双模式）；新增 6 个公开方法：<code>setGpkPending</code> / <code>activateGpk</code> / <code>setGpkImmediate</code> / <code>setCrossLimit</code> / <code>setHaltWorker</code> / <code>setHaltStatus</code>。</td>
+      </tr>
+      <tr>
+        <td><code>scripts/test-msg-gpk-enhance.js</code></td><td class="num">79</td><td class="num">0</td><td><span class="tag new">验证</span></td>
+        <td>编解码单元测试：PendingGPK/AssetLimit 往返、pack/unpack 与 Aiken 示例对齐、18 项 datum 回读、旧 12 项配置兼容（26 项全过）。</td>
+      </tr>
+      <tr>
+        <td><code>scripts/test-review-fixes.js</code></td><td class="num">160</td><td class="num">0</td><td><span class="tag new">验证</span></td>
+        <td>审核修复回归测试：空洞防御、switchGroup 抛错、haltWorkerSign 回退、newGpk 透传、值域校验、精度防护（18 项全过）。</td>
+      </tr>
+      <tr>
+        <td><code>scripts/smoke-msg-gpk-enhance.js</code></td><td class="num">35</td><td class="num">0</td><td><span class="tag new">验证</span></td>
+        <td>require 链冒烟：contracts-mgr + sdk 全方法注册检查。</td>
+      </tr>
+      <tr>
+        <td><code>scripts/verify-cbor-encoding.js</code></td><td class="num">33</td><td class="num">0</td><td><span class="tag new">验证</span></td>
+        <td>验证 CardanoWasm <code>PlutusData.to_bytes()</code> 与 Aiken <code>cbor.serialise</code> 输出一致（d8799f…ff）。</td>
+      </tr>
+      <tr>
+        <td><code>scripts/verify-cbor-decode.js</code></td><td class="num">25</td><td class="num">0</td><td><span class="tag new">验证</span></td>
+        <td>验证 <code>from_hex</code> 回读 Constr/List 编码（含空列表 d87980、Cons d87a9f）。</td>
+      </tr>
+      <tr>
+        <td><code>scripts/verify-empty-pending.js</code></td><td class="num">23</td><td class="num">0</td><td><span class="tag new">验证</span></td>
+        <td>验证清 pending（空字节）在 datum 中的编码与回读。</td>
+      </tr>
+      <tr>
+        <td><code>scripts/compare-plutus-branches.py</code></td><td class="num">39</td><td class="num">0</td><td><span class="tag new">工具</span></td>
+        <td>对比 alpha 与 msg-gpk-activate 分支 plutus.json validator hash，确定脚本更新范围（调研工具）。</td>
+      </tr>
+      <tr>
+        <td><code>scripts/extract-msg-plutus.py</code></td><td class="num">26</td><td class="num">0</td><td><span class="tag new">工具</span></td>
+        <td>从合约分支 plutus.json 提取 validator 编译产物（调研工具）。</td>
+      </tr>
+      <tr>
+        <td><code>scripts/sdk-script-hashes.js</code></td><td class="num">17</td><td class="num">0</td><td><span class="tag new">工具</span></td>
+        <td>计算 SDK 现有脚本 hash，与合约侧对比（调研工具）。</td>
+      </tr>
+      <tr>
+        <td><code>docs/COST_LOG.md</code></td><td class="num">6</td><td class="num">1</td><td><span class="tag doc">文档</span></td>
+        <td>记账：三审 + Codex 修复成本（≈$3.79，DeepSeek V4）。</td>
+      </tr>
+      <tr>
+        <td><code>.gitignore</code></td><td class="num">1</td><td class="num">0</td><td><span class="tag doc">配置</span></td>
+        <td>补充忽略规则。</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>🔍 关键设计决策（对应合约语义）</h2>
+  <table>
+    <thead><tr><th>SDK 侧</th><th>合约侧（msg-gpk-activate）</th><th>说明</th></tr></thead>
+    <tbody>
+      <tr><td><code>setPendingGpk</code>（action 14）</td><td><code>check_gpk_preset</code>，oracle 签名</td><td>预置 pending，要求 24h 延迟 + 1h 窗口 + new_gpk≠当前 GPK</td></tr>
+      <tr><td><code>activateGpk</code>（action 2 oracle）</td><td><code>check_gpk_activate</code>，oracle 签名</td><td>读链上 pending 自动写 GPK+清 params[14]；要求 lower≥activation_time</td></tr>
+      <tr><td><code>setGpkImmediate</code>（action 2 admin）</td><td><code>check_gpk_admin_set</code>，admin NFT</td><td>立即生效并清 pending；旧 12 项配置下 out[14] 允许 None</td></tr>
+      <tr><td><code>setCrossLimit</code>（action 15）</td><td>CrossLimit 更新，admin NFT</td><td>限额表 CBOR 编码（List Cons/Nil 结构）</td></tr>
+      <tr><td><code>setHaltWorker</code>（action 16）</td><td>HaltWorker 更新，admin NFT</td><td>pkh bytes</td></tr>
+      <tr><td><code>setHaltStatus</code>（action 17）</td><td><code>check_halt_direction</code></td><td>halt（0→1）由 haltworker 签名；unhalt（1→0）由 admin NFT；入口校验 status∈{0,1}</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="card">
+  <h2>🛡️ 质量闭环（三审 + Codex 修复）</h2>
+  <table>
+    <thead><tr><th>轮次</th><th>执行者</th><th>结论</th><th>处置</th></tr></thead>
+    <tbody>
+      <tr><td>一审</td><td>Claude Code（只读）</td><td><span class="err">1🔴 + 1🟡重要 + 1🟡 + 3🔵</span></td><td>6 项全部修复（Hermes）</td></tr>
+      <tr><td>二审</td><td>Claude Code（只读）</td><td><span class="warn">5✅ + 1⚠️</span>（switchGroup oracle 误导垫片）</td><td>Codex 修复 4 项（抛错引导/精度/注释/测试）</td></tr>
+      <tr><td>三审</td><td>Claude Code（只读）</td><td><span class="ok">✅ 可合入</span></td><td>3 项非阻断建议补齐（Hermes）</td></tr>
+    </tbody>
+  </table>
+  <h3>最终验证</h3>
+  <ul>
+    <li><code>node --check</code> 语法检查通过</li>
+    <li><code>scripts/test-review-fixes.js</code>：<span class="ok">18 passed, 0 failed</span></li>
+    <li><code>scripts/test-msg-gpk-enhance.js</code>：<span class="ok">26 passed, 0 failed</span></li>
+    <li>冒烟测试：ALL SMOKE OK</li>
+    <li>编码与 Aiken 逐字节对齐（d8799f / d87a9f / d87980 / pack_integer 大端）</li>
+    <li>静态安全检查：无硬编码密钥 / 无注入 / 无 eval</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h2>📎 说明与边界</h2>
+  <ul>
+    <li><b>不冲击现有框架</b>：既有方法签名与行为保持不变（switchGroup 除外——合约语义变化导致，已文档化并抛错引导）；合约字节码 json（plutus/testnet|mainnet）未替换，本次仅代码层增量。</li>
+    <li><b>新参数部署约束</b>：使用 14-17 参数前需先通过 action==0 将 GroupInfo datum 升级为 18 项完整配置（旧 12 项配置直接写新索引会被拒绝）。</li>
+    <li><b>GPK 参数格式</b>：32B 压缩公钥 hex 直传（合约用 verify_signature），不走 addressToPkhOrScriptHash。</li>
+  </ul>
+</div>
+
+<footer>生成于 2026-08-12 · contracts-sdk aiken-enhance 分支 · 本文档为静态快照，以 git 提交为准</footer>
+
+</div>
+</body>
+</html>
