@@ -117,6 +117,16 @@ class ContractSdk {
 
         let signedTx;
         switch (action) {
+            case contractsMgr.GroupNFT.GPK: {
+                // alpha 合约后 GPK 仅两条路径：admin 立即生效(action==2 + admin NFT，下方 switchGroup 内部 forceAdmin)
+                // 或 oracle 延时两阶段（presetPendingGPK -> activatePendingGPK，走 oracle 签名，不经此 admin 入口）
+                const newGpk = setParam; // 33 字节压缩公钥 hex
+                signedTx = await contractsMgr.GroupInfoNFTHolderScript.switchGroup(
+                    protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
+                    , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
+                    , newGpk, changeAddr, undefined, signFn, exUnitTx);
+                break;
+            }
             case contractsMgr.GroupNFT.OracleWorker: {
                 const newOracleWorker = utils.addressToPkhOrScriptHash(setParam);
 
@@ -327,6 +337,41 @@ class ContractSdk {
 
     async setInboundCheckVH(newInboundCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
         return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.InboundCheckVH, newInboundCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
+    }
+
+    // ---------- GPK 更新（alpha 合约语义）----------
+
+    // admin 立即生效：action==2 + admin NFT（invokeGroupInfoHolder 内部 forceAdmin）
+    async switchGroup(newGpkHex, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.GPK, newGpkHex, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
+    }
+
+    // oracle 阶段1：预置 pending GPK（action==14，oracle 签名，无 admin NFT 消费）
+    // activationTimeMs = POSIX ms（>= now+24h，SDK 校验）；validityStartSlot/ttl 由调用方按 slot 给出，
+    // 需自行换算保证窗口 (ttl-start) ms <= 1h（合约强制）。signFn 应为 oracle worker 私钥。
+    async presetPendingGPK(newGpkHex, utxosForFee, utxoForCollateral, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        const groupInfoUtxo = await this.getGroupInfoNft();
+        const protocolParamsGlobal = await ogmiosUtils.getParamProtocol();
+        const validityStartSlot = await ogmiosUtils.getLastestSolt();
+        const activationTimeMs = Math.floor(await ogmiosUtils.currentNetworkSlotToTimestamp(validityStartSlot + 86400));
+        return await contractsMgr.GroupInfoNFTHolderScript.presetPendingGPK(
+            protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
+            , this.groupInfoHolderRef
+            , newGpkHex, activationTimeMs, validityStartSlot, validityStartSlot+ 900, changeAddr, signFn, exUnitTx);
+    }
+
+    // oracle 阶段2：激活 pending GPK（action==2，oracle 签名，无 admin NFT 消费）
+    // validityStartSlot 可省略（undefined → validator 自动取 ttl-3600）。默认路径下调用方须保证
+    // ttl >= activation_slot + 3600，使 lower(ms) >= pending.activation_time（链上强制）。
+    // signFn 应为 oracle worker 私钥。
+    async activatePendingGPK(utxosForFee, utxoForCollateral, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        const groupInfoUtxo = await this.getGroupInfoNft();
+        const protocolParamsGlobal = await ogmiosUtils.getParamProtocol();
+        const validityStartSlot = await ogmiosUtils.getLastestSolt();
+        return await contractsMgr.GroupInfoNFTHolderScript.activatePendingGPK(
+            protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
+            , this.groupInfoHolderRef
+            , validityStartSlot, validityStartSlot+900, changeAddr, signFn, exUnitTx);
     }
 
     async addSignature(tx, signFn = undefined) {
