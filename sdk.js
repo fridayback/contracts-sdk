@@ -118,9 +118,9 @@ class ContractSdk {
         let signedTx;
         switch (action) {
             case contractsMgr.GroupNFT.GPK: {
-                // alpha ºÏÔ¼ºó GPK ½öÁ½ÌõÂ·¾¶£ºadmin Á¢¼´ÉúĞ§(action==2 + admin NFT£¬ÏÂ·½ switchGroup ÄÚ²¿ forceAdmin)
-                // »ò oracle ÑÓÊ±Á½½×¶Î£¨presetPendingGPK -> activatePendingGPK£¬×ß oracle Ç©Ãû£¬²»¾­´Ë admin Èë¿Ú£©
-                const newGpk = setParam; // 33 ×Ö½ÚÑ¹Ëõ¹«Ô¿ hex
+                // alpha åˆçº¦å GPK ä»…ä¸¤æ¡è·¯å¾„ï¼šadmin ç«‹å³ç”Ÿæ•ˆ(action==2 + admin NFTï¼Œä¸‹æ–¹ switchGroup å†…éƒ¨ forceAdmin)
+                // æˆ– oracle å»¶æ—¶ä¸¤é˜¶æ®µï¼ˆpresetPendingGPK -> activatePendingGPKï¼Œèµ° oracle ç­¾åï¼Œä¸ç»æ­¤ admin å…¥å£ï¼‰
+                const newGpk = setParam; // 33 å­—èŠ‚å‹ç¼©å…¬é’¥ hex
                 signedTx = await contractsMgr.GroupInfoNFTHolderScript.switchGroup(
                     protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
                     , this.groupInfoHolderRef, { adminNftUtxo, adminNftHoldRefScript, mustSignBy }
@@ -339,31 +339,32 @@ class ContractSdk {
         return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.InboundCheckVH, newInboundCheckVH, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
     }
 
-    // ---------- GPK ¸üĞÂ£¨alpha ºÏÔ¼ÓïÒå£©----------
+    // ---------- GPK æ›´æ–°ï¼ˆalpha åˆçº¦è¯­ä¹‰ï¼‰----------
 
-    // admin Á¢¼´ÉúĞ§£ºaction==2 + admin NFT£¨invokeGroupInfoHolder ÄÚ²¿ forceAdmin£©
+    // admin ç«‹å³ç”Ÿæ•ˆï¼šaction==2 + admin NFTï¼ˆinvokeGroupInfoHolder å†…éƒ¨ forceAdminï¼‰
     async switchGroup(newGpkHex, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
         return await this.invokeGroupInfoHolder(contractsMgr.GroupNFT.GPK, newGpkHex, mustSignBy, utxosForFee, utxoForCollaterals, changeAddr, signFn, exUnitTx);
     }
 
-    // oracle ½×¶Î1£ºÔ¤ÖÃ pending GPK£¨action==14£¬oracle Ç©Ãû£¬ÎŞ admin NFT Ïû·Ñ£©
-    // activationTimeMs = POSIX ms£¨>= now+24h£¬SDK Ğ£Ñé£©£»validityStartSlot/ttl ÓÉµ÷ÓÃ·½°´ slot ¸ø³ö£¬
-    // Ğè×ÔĞĞ»»Ëã±£Ö¤´°¿Ú (ttl-start) ms <= 1h£¨ºÏÔ¼Ç¿ÖÆ£©¡£signFn Ó¦Îª oracle worker Ë½Ô¿¡£
-    async presetPendingGPK(newGpkHex, utxosForFee, utxoForCollateral, changeAddr, signFn = undefined, exUnitTx = undefined) {
+    // oracle é˜¶æ®µ1ï¼šé¢„ç½® pending GPKï¼ˆaction==14ï¼Œoracle ç­¾åï¼Œæ—  admin NFT æ¶ˆè´¹ï¼‰
+    // activationTimeMs = POSIX msï¼ˆ>= now+24hï¼ŒSDK æ ¡éªŒï¼‰ï¼›validityStartSlot/ttl ç”±è°ƒç”¨æ–¹æŒ‰ slot ç»™å‡ºï¼Œ
+    // éœ€è‡ªè¡Œæ¢ç®—ä¿è¯çª—å£ (ttl-start) ms <= 1hï¼ˆåˆçº¦å¼ºåˆ¶ï¼‰ã€‚signFn åº”ä¸º oracle worker ç§é’¥ã€‚
+    async presetPendingGPK(newGpkHex, absulteActivationTimeMs, utxosForFee, utxoForCollateral, changeAddr, signFn = undefined, exUnitTx = undefined) {
         const groupInfoUtxo = await this.getGroupInfoNft();
         const protocolParamsGlobal = await ogmiosUtils.getParamProtocol();
         const validityStartSlot = await ogmiosUtils.getLastestSolt();
-        const activationTimeMs = Math.floor(await ogmiosUtils.currentNetworkSlotToTimestamp(validityStartSlot + 86400));
+        const curNetworkTimeMs = Math.floor(await ogmiosUtils.currentNetworkSlotToTimestamp(validityStartSlot));
+        if(absulteActivationTimeMs <= curNetworkTimeMs + 86400000) throw 'presetPendingGPK: absulteActivationTimeMs must > current network time + 86400000 (1 day)';
         return await contractsMgr.GroupInfoNFTHolderScript.presetPendingGPK(
             protocolParamsGlobal, utxosForFee, utxoForCollateral, groupInfoUtxo
             , this.groupInfoHolderRef
-            , newGpkHex, activationTimeMs, validityStartSlot, validityStartSlot+ 900, changeAddr, signFn, exUnitTx);
+            , newGpkHex, absulteActivationTimeMs, validityStartSlot, validityStartSlot+ 900, changeAddr, signFn, exUnitTx);
     }
 
-    // oracle ½×¶Î2£º¼¤»î pending GPK£¨action==2£¬oracle Ç©Ãû£¬ÎŞ admin NFT Ïû·Ñ£©
-    // validityStartSlot ¿ÉÊ¡ÂÔ£¨undefined ¡ú validator ×Ô¶¯È¡ ttl-3600£©¡£Ä¬ÈÏÂ·¾¶ÏÂµ÷ÓÃ·½Ğë±£Ö¤
-    // ttl >= activation_slot + 3600£¬Ê¹ lower(ms) >= pending.activation_time£¨Á´ÉÏÇ¿ÖÆ£©¡£
-    // signFn Ó¦Îª oracle worker Ë½Ô¿¡£
+    // oracle é˜¶æ®µ2ï¼šæ¿€æ´» pending GPKï¼ˆaction==2ï¼Œoracle ç­¾åï¼Œæ—  admin NFT æ¶ˆè´¹ï¼‰
+    // validityStartSlot å¯çœç•¥ï¼ˆundefined â†’ validator è‡ªåŠ¨å– ttl-3600ï¼‰ã€‚é»˜è®¤è·¯å¾„ä¸‹è°ƒç”¨æ–¹é¡»ä¿è¯
+    // ttl >= activation_slot + 3600ï¼Œä½¿ lower(ms) >= pending.activation_timeï¼ˆé“¾ä¸Šå¼ºåˆ¶ï¼‰ã€‚
+    // signFn åº”ä¸º oracle worker ç§é’¥ã€‚
     async activatePendingGPK(utxosForFee, utxoForCollateral, changeAddr, signFn = undefined, exUnitTx = undefined) {
         const groupInfoUtxo = await this.getGroupInfoNft();
         const protocolParamsGlobal = await ogmiosUtils.getParamProtocol();

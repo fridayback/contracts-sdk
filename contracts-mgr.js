@@ -171,8 +171,8 @@ class GroupNFT {
     static NFTMintCheckVH = 11;
     static OutboundHolderVH = 12;
     static InboundCheckVH = 13;
-    static PendingGPKParam = 14; // oracle ÑÓÊ±¼¤»î£ºparams[14] = cbor(PendingGPK) »ò #""£¨ÎŞ pending£©
-    // alpha 003 ºó action Óò 0..14£»ÒÔÏÂË÷ÒıÎŞ¸üĞÂÂ·ÓÉ£¨¶ÁÈ¡/¼æÈİÓÃ£©
+    static PendingGPKParam = 14; // oracle å»¶æ—¶æ¿€æ´»ï¼šparams[14] = cbor(PendingGPK) æˆ– #""ï¼ˆæ—  pendingï¼‰
+    // alpha 003 å action åŸŸ 0..14ï¼›ä»¥ä¸‹ç´¢å¼•æ— æ›´æ–°è·¯ç”±ï¼ˆè¯»å–/å…¼å®¹ç”¨ï¼‰
     static CrossLimit = 15;
     static HaltWorker = 16;
     static HaltStatus = 17;
@@ -196,9 +196,9 @@ class GroupNFT {
         const ls = CardanoWasm.PlutusList.new();
 
         const params = CardanoWasm.PlutusList.new();
-        // ¶¯Ì¬°´Êı×Ö¼ü 0..maxKey Êä³ö params ÁĞ±í£¨ÓëºÏÔ¼ ParamType Ë÷Òı¶ÔÆë£©¡£
-        // ¾ÉÁ´ÉÏ datum ¿ÉÄÜÖ»µ½ 11/13 ¸ö²ÎÊı£ºgenGroupInfoDatum Ö»Ğ´´æÔÚµÄ¼ü£¬
-        // ±£³ÖÓë´«ÈëÅäÖÃÒ»ÖÂ£¨mint Ê±¸ø 0..13 ¡ú 14 Ïî£»¸ø 0..14 ¡ú 15 Ïîº¬ PendingGPKParam£©¡£
+        // åŠ¨æ€æŒ‰æ•°å­—é”® 0..maxKey è¾“å‡º params åˆ—è¡¨ï¼ˆä¸åˆçº¦ ParamType ç´¢å¼•å¯¹é½ï¼‰ã€‚
+        // æ—§é“¾ä¸Š datum å¯èƒ½åªåˆ° 11/13 ä¸ªå‚æ•°ï¼šgenGroupInfoDatum åªå†™å­˜åœ¨çš„é”®ï¼Œ
+        // ä¿æŒä¸ä¼ å…¥é…ç½®ä¸€è‡´ï¼ˆmint æ—¶ç»™ 0..13 â†’ 14 é¡¹ï¼›ç»™ 0..14 â†’ 15 é¡¹å« PendingGPKParamï¼‰ã€‚
         const numKeys = Object.keys(groupInfoParams)
             .map(Number)
             .filter((k) => Number.isInteger(k) && k >= 0)
@@ -565,9 +565,9 @@ class GroupInfoNFTHolderScript {
     //     return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, adminInfo, utxosToSpend, scriptRef, params, changeAddress, ttl, signFn, GroupNFT.Admin, adminInfo);
     // }
 
-    // ---------- GPK Á¢¼´ÉúĞ§£ºadmin Â·¾¶£¨action==2 + admin NFT input£©----------
-    // alpha ºÏÔ¼ check_gpk_admin_set£ºout[2] != in[2]¡¢out[14] == #""£¨Çå pending£©¡¢½ö {2,14} ¿É±ä¡¢³¤¶ÈÏàµÈ
-    // ×¢Òâ£ºoracle ²»ÔÙÔÊĞíÖ±Ğ´ GPK ¡ª¡ª oracle ÂÖ»»Çë×ß presetPendingGPK -> (µÈ´ı activation_time) -> activatePendingGPK
+    // ---------- GPK ç«‹å³ç”Ÿæ•ˆï¼šadmin è·¯å¾„ï¼ˆaction==2 + admin NFT inputï¼‰----------
+    // alpha åˆçº¦ check_gpk_admin_setï¼šout[2] != in[2]ã€out[14] == #""ï¼ˆæ¸… pendingï¼‰ã€ä»… {2,14} å¯å˜ã€é•¿åº¦ç›¸ç­‰
+    // æ³¨æ„ï¼šoracle ä¸å†å…è®¸ç›´å†™ GPK â€”â€” oracle è½®æ¢è¯·èµ° presetPendingGPK -> (ç­‰å¾… activation_time) -> activatePendingGPK
     static async switchGroup(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, adminInfo, newGpk, changeAddress, ttl, signFn, exUnitTx) {
         let params = GroupNFT.groupInfoFromDatum(utxoToSpend.datum);
         const curGpk = params[GroupNFT.GPK + ''];
@@ -575,19 +575,19 @@ class GroupInfoNFTHolderScript {
             throw new Error('switchGroup: new GPK must differ from current GPK');
         }
         params[GroupNFT.GPK + ''] = newGpk;
-        // admin Á¢¼´ÉúĞ§Ê±Í¬Ê±Çå¿Õ pending£¨check_gpk_admin_set ÒªÇó out[14] == #""£©
+        // admin ç«‹å³ç”Ÿæ•ˆæ—¶åŒæ—¶æ¸…ç©º pendingï¼ˆcheck_gpk_admin_set è¦æ±‚ out[14] == #""ï¼‰
         if (params[GroupNFT.PendingGPKParam + ''] !== undefined) {
             params[GroupNFT.PendingGPKParam + ''] = '';
         }
 
-        // admin Â·¾¶£º±ØĞëĞ¯´ø admin NFT input£¨forceAdmin=true ×ß admin ÊÚÈ¨£¬·Ç oracle£©
+        // admin è·¯å¾„ï¼šå¿…é¡»æºå¸¦ admin NFT inputï¼ˆforceAdmin=true èµ° admin æˆæƒï¼Œé oracleï¼‰
         const adminInfoForAdmin = Object.assign({}, adminInfo || {}, { forceAdmin: true });
         return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, params, changeAddress, ttl, signFn, GroupNFT.GPK, adminInfoForAdmin, exUnitTx);
     }
 
-    // ---------- PendingGPK cbor ±à½âÂë¸¨Öú ----------
+    // ---------- PendingGPK cbor ç¼–è§£ç è¾…åŠ© ----------
     // Aiken: pub type PendingGPK { new_gpk: ByteArray, activation_time: Int }
-    // params[14] ´æ cbor.serialise(ToData(PendingGPK)) = Constr(0, [bytes new_gpk, int activation_time])
+    // params[14] å­˜ cbor.serialise(ToData(PendingGPK)) = Constr(0, [bytes new_gpk, int activation_time])
     static encodePendingGPK(newGpkHex, activationTimeMs) {
         const ls = CardanoWasm.PlutusList.new();
         ls.add(CardanoWasm.PlutusData.new_bytes(Buffer.from(newGpkHex, 'hex')));
@@ -609,21 +609,21 @@ class GroupInfoNFTHolderScript {
         return { new_gpk, activation_time };
     }
 
-    // ---------- GPK ÑÓÊ±¼¤»î½×¶Î1£ºoracle Ô¤ÖÃ pending£¨action==14£©----------
-    // ºÏÔ¼ check_gpk_preset Ô¼Êø£º
-    //   - ½ö params[14] ¿É±ä£¨ÆäÓàÓë in Öğ×Ö½ÚÏàÍ¬£©£¬³¤¶ÈÏàµÈ£¨datum ±ØĞëÒÑº¬ 14 ²Û£©
-    //   - lower/upper ±ØĞë Finite ÇÒ upper-lower <= gpk_rotation_window_ms(1h)
-    //   - activation_time >= lower + gpk_activation_delay_ms(24h)£¨SDK ÎŞ·¨»»Ëã slot->ms£¬
-    //     ÓÉµ÷ÓÃ·½±£Ö¤ validityStartSlot/ttl »»Ëã ms ºóÂú×ã´°¿Ú£»Á´ÉÏ»áÇ¿ÖÆĞ£Ñé£©
-    //   - new_gpk != µ±Ç° params[2]
-    // Ç©ÃûÉí·İ£ºoracle£¨validator ×Ô¶¯ÒÔ params[5]=OracleWorker Îª required signer£¬signFn ÓÃ oracle Ë½Ô¿Ç©Ãû£©
+    // ---------- GPK å»¶æ—¶æ¿€æ´»é˜¶æ®µ1ï¼šoracle é¢„ç½® pendingï¼ˆaction==14ï¼‰----------
+    // åˆçº¦ check_gpk_preset çº¦æŸï¼š
+    //   - ä»… params[14] å¯å˜ï¼ˆå…¶ä½™ä¸ in é€å­—èŠ‚ç›¸åŒï¼‰ï¼Œé•¿åº¦ç›¸ç­‰ï¼ˆdatum å¿…é¡»å·²å« 14 æ§½ï¼‰
+    //   - lower/upper å¿…é¡» Finite ä¸” upper-lower <= gpk_rotation_window_ms(1h)
+    //   - activation_time >= lower + gpk_activation_delay_ms(24h)ï¼ˆSDK æ— æ³•æ¢ç®— slot->msï¼Œ
+    //     ç”±è°ƒç”¨æ–¹ä¿è¯ validityStartSlot/ttl æ¢ç®— ms åæ»¡è¶³çª—å£ï¼›é“¾ä¸Šä¼šå¼ºåˆ¶æ ¡éªŒï¼‰
+    //   - new_gpk != å½“å‰ params[2]
+    // ç­¾åèº«ä»½ï¼šoracleï¼ˆvalidator è‡ªåŠ¨ä»¥ params[5]=OracleWorker ä¸º required signerï¼ŒsignFn ç”¨ oracle ç§é’¥ç­¾åï¼‰
     static async presetPendingGPK(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef,
         newGpkHex, activationTimeMs, validityStartSlot, ttl, changeAddress, signFn, exUnitTx) {
 
         let params = GroupNFT.groupInfoFromDatum(utxoToSpend.datum);
         if (params[GroupNFT.PendingGPKParam + ''] === undefined) {
-            // ºÏÔ¼ preset ÒªÇó³¤¶ÈÑÏ¸ñÏàµÈ£¨datum ±ØĞëÒÑº¬ 14 ²Û£©¡ª¡ªÊ×´ÎÆôÓÃĞèÏÈ action==0 Éı¼¶×·¼Ó¿Õ²Û£¬
-            // »ò mint Ê±Ö±½Ó´ø 15 keys£¨º¬ '14': ''£©
+            // åˆçº¦ preset è¦æ±‚é•¿åº¦ä¸¥æ ¼ç›¸ç­‰ï¼ˆdatum å¿…é¡»å·²å« 14 æ§½ï¼‰â€”â€”é¦–æ¬¡å¯ç”¨éœ€å…ˆ action==0 å‡çº§è¿½åŠ ç©ºæ§½ï¼Œ
+            // æˆ– mint æ—¶ç›´æ¥å¸¦ 15 keysï¼ˆå« '14': ''ï¼‰
             throw new Error('presetPendingGPK: datum params has no index 14 (PendingGPKParam). ' +
                 'Append an empty 14 slot via action==0 version upgrade, or mint groupInfo with 15 keys first.');
         }
@@ -650,15 +650,15 @@ class GroupInfoNFTHolderScript {
             changeAddress, ttl, signFn, GroupNFT.PendingGPKParam, { forceAdmin: false }, exUnitTx, validityStartSlot);
     }
 
-    // ---------- GPK ÑÓÊ±¼¤»î½×¶Î2£ºoracle ¼¤»î pending£¨action==2£¬ÎŞ admin NFT£©----------
-    // ºÏÔ¼ check_gpk_activate Ô¼Êø£º
-    //   - Á´ÉÏÊ±¼ä£¨validity lower ms£©>= pending.activation_time
-    //   - out[2] == pending.new_gpk£»out[14] == #""£»½ö {2,14} ¿É±ä£»³¤¶ÈÏàµÈ
-    // Ä¬ÈÏ lower ²ßÂÔ£º²»´« validityStartSlot Ê± validator ×Ô¶¯È¡ ttl - 3600£¨1h ´°¿Ú£©¡£
-    //   activate Òò´ËÒªÇóµ÷ÓÃ·½×ÔĞĞ±£Ö¤ ttl >= activation_slot + 3600£¬
-    //   Ê¹ lower(ms) = (ttl-3600 ¶ÔÓ¦ ms) >= pending.activation_time£¨slotLength=1s Ç°Ìá£©£»
-    //   ÏÔÊ½´« validityStartSlot Ê±ÓÉµ÷ÓÃ·½±£Ö¤Æä ms >= activation_time¡£
-    // Ç©ÃûÉí·İ£ºoracle£¨validator ×Ô¶¯ÒÔ params[5]=OracleWorker Îª required signer£©
+    // ---------- GPK å»¶æ—¶æ¿€æ´»é˜¶æ®µ2ï¼šoracle æ¿€æ´» pendingï¼ˆaction==2ï¼Œæ—  admin NFTï¼‰----------
+    // åˆçº¦ check_gpk_activate çº¦æŸï¼š
+    //   - é“¾ä¸Šæ—¶é—´ï¼ˆvalidity lower msï¼‰>= pending.activation_time
+    //   - out[2] == pending.new_gpkï¼›out[14] == #""ï¼›ä»… {2,14} å¯å˜ï¼›é•¿åº¦ç›¸ç­‰
+    // é»˜è®¤ lower ç­–ç•¥ï¼šä¸ä¼  validityStartSlot æ—¶ validator è‡ªåŠ¨å– ttl - 3600ï¼ˆ1h çª—å£ï¼‰ã€‚
+    //   activate å› æ­¤è¦æ±‚è°ƒç”¨æ–¹è‡ªè¡Œä¿è¯ ttl >= activation_slot + 3600ï¼Œ
+    //   ä½¿ lower(ms) = (ttl-3600 å¯¹åº” ms) >= pending.activation_timeï¼ˆslotLength=1s å‰æï¼‰ï¼›
+    //   æ˜¾å¼ä¼  validityStartSlot æ—¶ç”±è°ƒç”¨æ–¹ä¿è¯å…¶ ms >= activation_timeã€‚
+    // ç­¾åèº«ä»½ï¼šoracleï¼ˆvalidator è‡ªåŠ¨ä»¥ params[5]=OracleWorker ä¸º required signerï¼‰
     static async activatePendingGPK(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef,
         validityStartSlot, ttl, changeAddress, signFn, exUnitTx) {
 
@@ -668,8 +668,8 @@ class GroupInfoNFTHolderScript {
             throw new Error('activatePendingGPK: no pending GPK in params[14]');
         }
         const pending = GroupInfoNFTHolderScript.decodePendingGPK(pendingBytesHex);
-        // ÌáÊ¾£¨·Ç×èÈû£©£ºÁ´ÉÏÇ¿ÖÆ lower(ms) >= activation_time¡£devnet Á´Ê±¼ä¿ÉÓë±¾µØÊ±ÖÓ²»Í¬²½
-        // £¨¼ÓËÙÊ±¼ä/×Ô¶¨Òå systemStart£©£¬¹Ê´Ë´¦½ö warn£»ÕæÕıĞ£ÑéÓÉÁ´ÉÏÖ´ĞĞ¡£
+        // æç¤ºï¼ˆéé˜»å¡ï¼‰ï¼šé“¾ä¸Šå¼ºåˆ¶ lower(ms) >= activation_timeã€‚devnet é“¾æ—¶é—´å¯ä¸æœ¬åœ°æ—¶é’Ÿä¸åŒæ­¥
+        // ï¼ˆåŠ é€Ÿæ—¶é—´/è‡ªå®šä¹‰ systemStartï¼‰ï¼Œæ•…æ­¤å¤„ä»… warnï¼›çœŸæ­£æ ¡éªŒç”±é“¾ä¸Šæ‰§è¡Œã€‚
         if (Date.now() < pending.activation_time) {
             console.warn('activatePendingGPK: local clock (' + Date.now() + ' ms) is before activation_time (' +
                 pending.activation_time + ' ms). Ensure chain time already reached activation_time ' +
@@ -812,8 +812,8 @@ class GroupInfoNFTHolderScript {
     static async validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, groupInfoParams, changeAddress, ttl, signFn, action
         , adminInfo = { forceAdmin: false, adminNftUtxo: undefined, adminNftHoldRefScript: undefined, mustSignBy: undefined }, exUnitTx, validityStartSlot) {//forceAdmin = false
 
-        // alpha ºÏÔ¼ÊÚÈ¨Ä£ĞÍ£ºadmin NFT ¡ú ÈÎÒâ action(0..14)£»oracle Ç©Ãû ¡ú ½ö action==2(GPK) / action==14(PendingGPKParam)
-        // action==2 ÇÒÎŞ admin NFT Ê± = oracle ¼¤»î pending£¨check_gpk_activate£©£»action==14 = oracle Ô¤ÖÃ pending£¨check_gpk_preset£©
+        // alpha åˆçº¦æˆæƒæ¨¡å‹ï¼šadmin NFT â†’ ä»»æ„ action(0..14)ï¼›oracle ç­¾å â†’ ä»… action==2(GPK) / action==14(PendingGPKParam)
+        // action==2 ä¸”æ—  admin NFT æ—¶ = oracle æ¿€æ´» pendingï¼ˆcheck_gpk_activateï¼‰ï¼›action==14 = oracle é¢„ç½® pendingï¼ˆcheck_gpk_presetï¼‰
         const isOracleOnlyAction = (action == GroupNFT.GPK || action == GroupNFT.PendingGPKParam) && !adminInfo.forceAdmin;
         let inputs_arr = [];
         for (let i = 0; i < utxosForFee.length; i++) {
@@ -906,7 +906,7 @@ class GroupInfoNFTHolderScript {
             const params = GroupNFT.groupInfoFromDatum(utxoToSpend.datum);
 
             if (isOracleOnlyAction) {
-                // oracle ¼¤»î(action==2)/Ô¤ÖÃ(action==14)£ºÇ©ÃûÕßÎª GroupInfoParams OracleWorker(params[5])
+                // oracle æ¿€æ´»(action==2)/é¢„ç½®(action==14)ï¼šç­¾åè€…ä¸º GroupInfoParams OracleWorker(params[5])
                 adminPKHForSign = params[GroupNFT.OracleWorker];
             }
             const witness = CardanoWasm.PlutusWitness.new_with_ref(
@@ -920,15 +920,15 @@ class GroupInfoNFTHolderScript {
 
         // console.log('input to spend:', txInputBuilder.inputs().to_json());
         if (ttl) txBuilder.set_ttl(ttl);
-        // alpha gpk ÑÓÊ±¼¤»îĞèÒª Finite lower bound£º
-        //   preset(action==14): lower ±ØĞë´æÔÚÇÒ´°¿Ú upper-lower <= 1h
+        // alpha gpk å»¶æ—¶æ¿€æ´»éœ€è¦ Finite lower boundï¼š
+        //   preset(action==14): lower å¿…é¡»å­˜åœ¨ä¸”çª—å£ upper-lower <= 1h
         //   activate(action==2): lower >= pending.activation_time
-        // Ä¬ÈÏ²ßÂÔ£ºoracle Â·¾¶£¨action==2/14 ÇÒ·Ç forceAdmin£©Î´ÏÔÊ½´« validityStartSlot Ê±£¬
-        // ×Ô¶¯È¡ ttl - 3600£¨slot£¬slotLength=1s Ê±´°¿ÚÇ¡Îª 1h = 3_600_000ms£¬ºÏÔ¼ u-l>1h ²Å¾Ü£¬Ç¡ºÃ 1h Í¨¹ı£©¡£
-        //   - preset£º´°¿Ú = ttl - (ttl-3600) = 3600s <= 1h ?
-        //   - activate£ºµ÷ÓÃ·½±ØĞë×ÔĞĞ±£Ö¤ ttl >= activation_slot + 3600£¬
-        //     Ê¹ lower(ms) = (ttl-3600 ¶ÔÓ¦ ms) >= pending.activation_time£¨slotLength=1s Ç°Ìá£©¡£
-        //     ttl ²»×ãÊ±½»Ò×»á±»ºÏÔ¼¾Ü¾ø¡ª¡ªSDK ÎŞ·¨ÔÚ´Ë»»Ëã slot->ms£¬Ğ£ÑéÁô¸øÁ´ÉÏ¡£
+        // é»˜è®¤ç­–ç•¥ï¼šoracle è·¯å¾„ï¼ˆaction==2/14 ä¸”é forceAdminï¼‰æœªæ˜¾å¼ä¼  validityStartSlot æ—¶ï¼Œ
+        // è‡ªåŠ¨å– ttl - 3600ï¼ˆslotï¼ŒslotLength=1s æ—¶çª—å£æ°ä¸º 1h = 3_600_000msï¼Œåˆçº¦ u-l>1h æ‰æ‹’ï¼Œæ°å¥½ 1h é€šè¿‡ï¼‰ã€‚
+        //   - presetï¼šçª—å£ = ttl - (ttl-3600) = 3600s <= 1h âœ“
+        //   - activateï¼šè°ƒç”¨æ–¹å¿…é¡»è‡ªè¡Œä¿è¯ ttl >= activation_slot + 3600ï¼Œ
+        //     ä½¿ lower(ms) = (ttl-3600 å¯¹åº” ms) >= pending.activation_timeï¼ˆslotLength=1s å‰æï¼‰ã€‚
+        //     ttl ä¸è¶³æ—¶äº¤æ˜“ä¼šè¢«åˆçº¦æ‹’ç»â€”â€”SDK æ— æ³•åœ¨æ­¤æ¢ç®— slot->msï¼Œæ ¡éªŒç•™ç»™é“¾ä¸Šã€‚
         if (isOracleOnlyAction) {
             if (!ttl) {
                 throw new Error('GroupInfoNFTHolderScript.validator: ttl required for oracle action (GPK activate / PendingGPKParam preset)');
