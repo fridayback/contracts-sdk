@@ -554,7 +554,7 @@ class GroupInfoNFTHolderScript {
             }
         }
 
-        return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, newDatum, changeAddress, ttl, signFn, GroupNFT.Version, adminInfo, exUnitTx, exUnitTx);
+        return await GroupInfoNFTHolderScript.validator(protocolParams, utxosForFee, utxoForCollateral, utxoToSpend, scriptRef, newDatum, changeAddress, ttl, signFn, GroupNFT.Version, adminInfo, exUnitTx);
     }
 
     // static async updateAdmin(protocolParams, utxosForFee, utxoForCollateral, utxosToSpend, scriptRef, adminInfo, newAdmin, changeAddress, ttl, signFn) {
