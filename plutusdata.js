@@ -524,9 +524,6 @@ module.exports.msgAddressFromCbor = function (cbor, networkId) {
             return this.addressFromCbor(localAddr.to_hex(), networkId);
             break;
         }
-        case '1': {
-
-        }
     }
     const ls = d.as_constr_plutus_data().data().as_list();
     return ls.get(0).to_hex();
