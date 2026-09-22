@@ -708,6 +708,66 @@ class ContractSdk {
         return signedTx;
     }
 
+    async burnInboundCheckToken(amount, mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        const groupInfoUtxo = await this.getGroupInfoNft();
+        const groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(groupInfoUtxo.datum);
+        const adminNftUtxo = await this.getAdminNft();
+        const protocolParamsGlobal = await ogmiosUtils.getParamProtocol();
+
+        const trearyCheckAddr = msgContracts.InboundCheckScript.address(groupInfoParams[contractsMgr.GroupNFT.StkVh]).to_bech32(this.ADDR_PREFIX);
+        let burnUtxos = await ogmiosUtils.getUtxo(trearyCheckAddr);
+        if (amount > burnUtxos.length) {
+            throw `too many utxos to be burnd: max InboundCheck utxos is ${burnUtxos.length}`
+        }
+        burnUtxos = burnUtxos.slice(0, amount);
+
+        let mustSignBy = [];
+        for (let i = 0; i < mustSignByAddrs.length; i++) {
+            const addr = mustSignByAddrs[i];
+            if (utils.addressType(addr) == CardanoWasm.CredKind.Script) {
+                throw 'not supports script address'
+            }
+
+            mustSignBy.push(utils.addressToPkhOrScriptHash(addr));
+        }
+
+        const signedTx = await msgContracts.InboundCheckScript.burn(protocolParamsGlobal, utxosForFee
+            , utxoForCollaterals, burnUtxos, this.inboundCheckTokenScriptRefUtxo
+            , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }
+            , changeAddr, signFn, exUnitTx);
+
+        return signedTx;
+    }
+    async burnInboundCheckTokenWithHolder(amount, holder, mustSignByAddrs, utxosForFee, utxoForCollaterals, changeAddr, signFn = undefined, exUnitTx = undefined) {
+        const groupInfoUtxo = await this.getGroupInfoNft();
+        const groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(groupInfoUtxo.datum);
+        const adminNftUtxo = await this.getAdminNft();
+        const protocolParamsGlobal = await ogmiosUtils.getParamProtocol();
+         
+        let burnUtxos = await ogmiosUtils.getUtxo(holder);
+        if (amount > burnUtxos.length) {
+            throw `too many utxos to be burnd: max InboundCheck utxos is ${burnUtxos.length}`
+        }
+        burnUtxos = burnUtxos.slice(0, amount);
+
+        let mustSignBy = [];
+        for (let i = 0; i < mustSignByAddrs.length; i++) {
+            const addr = mustSignByAddrs[i];
+            if (utils.addressType(addr) == CardanoWasm.CredKind.Script) {
+                throw 'not supports script address'
+            }
+
+            mustSignBy.push(utils.addressToPkhOrScriptHash(addr));
+        }
+
+        const signedTx = await msgContracts.InboundCheckScript.burn(protocolParamsGlobal, utxosForFee
+            , utxoForCollaterals, burnUtxos, this.inboundCheckTokenScriptRefUtxo
+            , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }
+            , changeAddr, signFn, exUnitTx);
+
+        return signedTx;
+    }
+
 
 }
 
