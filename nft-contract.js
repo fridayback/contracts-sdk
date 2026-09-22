@@ -566,7 +566,7 @@ class NFTTreasuryCheckScript {
     // }
 
     static async burn(protocolParams, utxosForFee, utxoForCollateral, utxosSpend, scriptRef, checkTokenScriptRef, groupInfoUtxo, adminNftInfo, changeAddress, signFn, exUnitTx) {
-        dd
+        
         let inputs_arr = [];
         for (let i = 0; i < utxosForFee.length; i++) {
             inputs_arr.push(utxosForFee[i].txHash + '#' + utxosForFee[i].index);
