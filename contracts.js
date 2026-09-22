@@ -621,7 +621,7 @@ class TreasuryScript {
             const mode = parmsLs.get(8).as_integer().as_int().as_i32();
             const uniqueId = Buffer.from(parmsLs.get(9).as_bytes()).toString('hex');
             const txType = parmsLs.get(10).as_integer().as_int().as_i32();
-            const ttl = parmsLs.get(11).as_integer().as_int().as_i32();
+            const ttl = parmsLs.get(11).as_integer().to_str()*1;
             const outputCount = parmsLs.get(12).as_integer().as_int().as_i32();
             const signature = Buffer.from(parmsLs.get(13).as_bytes()).toString('hex');
 
@@ -2096,7 +2096,7 @@ class MintCheckScript {
             const index = ls.get(6).as_integer().as_int().as_i32();
             const mode = ls.get(7).as_integer().as_int().as_i32();
             const uniqueId = Buffer.from(ls.get(8).as_bytes()).toString('hex');
-            const ttl = ls.get(9).as_integer().as_int().as_i32();
+            const ttl = parmsLs.get(11).as_integer().to_str()*1;
             const signature = Buffer.from(ls.get(10).as_bytes()).toString('hex');
 
             return { toPKHPay, toPKHStk, tokenId, amount, txHash, index, mode, uniqueId, signature, ttl, userData };

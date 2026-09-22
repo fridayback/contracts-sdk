@@ -778,7 +778,7 @@ class ContractSdk {
         }
 
         const signedTx = await msgContracts.InboundCheckScript.burn(protocolParamsGlobal, utxosForFee
-            , utxoForCollaterals, burnUtxos, this.inboundCheckTokenScriptRefUtxo
+            , utxoForCollaterals, burnUtxos,this.inboundCheckScriptRefUtxo, this.inboundCheckTokenScriptRefUtxo
             , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }
             , changeAddr, signFn, exUnitTx);
 
@@ -807,7 +807,7 @@ class ContractSdk {
         }
 
         const signedTx = await msgContracts.InboundCheckScript.burn(protocolParamsGlobal, utxosForFee
-            , utxoForCollaterals, burnUtxos, this.inboundCheckTokenScriptRefUtxo
+            , utxoForCollaterals, burnUtxos,this.inboundCheckScriptRefUtxo, this.inboundCheckTokenScriptRefUtxo
             , groupInfoUtxo, { adminNftUtxo, adminNftHoldRefScript: this.adminNftHoldRefScript, mustSignBy }
             , changeAddr, signFn, exUnitTx);
 
