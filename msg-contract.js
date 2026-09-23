@@ -516,7 +516,7 @@ class InboundCheckScript {
             CardanoWasm.PlutusScriptSource.new_ref_input(scriptTmp.hash(), checkTokenScriptRefInput
                 , scriptTmp.language_version(), scriptSize)
             , redeemer);
-        const assetName = CardanoWasm.AssetName.new(Buffer.from(InboundTokenScript.tokenName()));
+        const assetName = CardanoWasm.AssetName.new(Buffer.from(InboundCheckTokenScript.tokenName()));
         // console.log(assetName.to_json());
         mintBuilder.add_asset(mint_witnes, assetName, CardanoWasm.Int.from_str('-' + utxosSpend.length));
         txBuilder.set_mint_builder(mintBuilder);
