@@ -110,10 +110,12 @@ module.exports.createScriptRef = async function (protocolParams, utxtos, changeA
     let txBodyHash = CardanoWasm.hash_transaction(body);
 
     const transactionWitnessSet = CardanoWasm.TransactionWitnessSet.new();
-    const vkeyWitnesses = CardanoWasm.Vkeywitnesses.new();
-    const signResult = await signFn(txBodyHash.to_hex());
-    vkeyWitnesses.add(CardanoWasm.Vkeywitness.from_json(JSON.stringify(signResult)));
-    transactionWitnessSet.set_vkeys(vkeyWitnesses);
+    if (signFn) {                                        // ← 新增
+        const vkeyWitnesses = CardanoWasm.Vkeywitnesses.new();
+        const signResult = await signFn(txBodyHash.to_hex());
+        vkeyWitnesses.add(CardanoWasm.Vkeywitness.from_json(JSON.stringify(signResult)));
+        transactionWitnessSet.set_vkeys(vkeyWitnesses);
+    }
 
     const signedTx = CardanoWasm.Transaction.new(
         body,

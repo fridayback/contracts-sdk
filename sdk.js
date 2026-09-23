@@ -814,6 +814,12 @@ class ContractSdk {
         return signedTx;
     }
 
+    async createScriptRefUtxo(script, utxosForFee, changeAddr, signFn = undefined) {
+        const protocolParamsGlobal = await ogmiosUtils.getParamProtocol();
+        const tx = await utils.createScriptRef(protocolParamsGlobal, utxosForFee, changeAddr,this.scriptRefOwnerAddr, script, signFn);
+        return tx;
+    }
+
 
 }
 
