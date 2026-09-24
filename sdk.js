@@ -85,9 +85,13 @@ class ContractSdk {
         return groupInfoToken;
     }
 
-    async getGroupInfo() {
-        const utxo = await this.getGroupInfoNft();
-        let groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(utxo.datum);
+    // async getGroupInfo() {
+    //     const utxo = await this.getGroupInfoNft();
+    //     return this.getGroupInfoByDatum(utxo.datum);
+    // }
+
+    getGroupInfoByDatum(datumHex) {
+        let groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(datumHex);
         if (groupInfoParams[contractsMgr.GroupNFT.PendingGPKParam]) {
             groupInfoParams[contractsMgr.GroupNFT.PendingGPKParam] = contractsMgr.GroupInfoNFTHolderScript.decodePendingGPK(groupInfoParams[contractsMgr.GroupNFT.PendingGPKParam]);
             groupInfoParams[contractsMgr.GroupNFT.PendingGPKParam].activation_time = new Date(groupInfoParams[contractsMgr.GroupNFT.PendingGPKParam].activation_time).toUTCString();
