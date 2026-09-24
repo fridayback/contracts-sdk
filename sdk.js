@@ -16,6 +16,20 @@ const ACTION_DEREGISTER = 2;
 const scriptRefHolderMainnet = 'addr1qys3nr0s5wqz3gw2n9satl279ntzha2z92v4ewrknr234hzx8ugllqwa07adyqwz23j797tha446p0exqa8jjypyqzasq73gym';
 const scriptRefHolderTestnet = 'addr_test1vq73yuplt9c5zmgw4ve7qhu49yxllw7q97h4smwvfgst32qrkwupd';//addr_test1qphjkuwfcyemz05dug4jjkfljanzn70lvrcmfk67j25dydzuhxsuxygu3zrzavc6a6m58yj7zgtuen34dfa9mlz6d00qca5qaz;
 
+function formatDateUTC(timestamp) {
+  const pad = (n) => String(n).padStart(2, '0');
+  const date = new Date(timestamp);
+
+  const year = date.getUTCFullYear();
+  const month = pad(date.getUTCMonth() + 1);
+  const day = pad(date.getUTCDate());
+  const hours = pad(date.getUTCHours());
+  const minutes = pad(date.getUTCMinutes());
+  const seconds = pad(date.getUTCSeconds());
+
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
 class ContractSdk {
 
     constructor(isMainnet = false, scriptRefOwnerAddr = undefined, conViaWs = false) {
@@ -94,7 +108,7 @@ class ContractSdk {
         let groupInfoParams = contractsMgr.GroupNFT.groupInfoFromDatum(datumHex);
         if (groupInfoParams[contractsMgr.GroupNFT.PendingGPKParam]) {
             groupInfoParams[contractsMgr.GroupNFT.PendingGPKParam] = contractsMgr.GroupInfoNFTHolderScript.decodePendingGPK(groupInfoParams[contractsMgr.GroupNFT.PendingGPKParam]);
-            groupInfoParams[contractsMgr.GroupNFT.PendingGPKParam].activation_time = new Date(groupInfoParams[contractsMgr.GroupNFT.PendingGPKParam].activation_time).toUTCString();
+            groupInfoParams[contractsMgr.GroupNFT.PendingGPKParam].activation_time = formatDateUTC(groupInfoParams[contractsMgr.GroupNFT.PendingGPKParam].activation_time);
         }
         return groupInfoParams;
     }
